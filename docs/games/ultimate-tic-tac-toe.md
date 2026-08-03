@@ -192,6 +192,12 @@ cosmetic, since both are loose upper bounds.
 
 ## 8. References
 
+**Video explanation**
+
+- *TODO - add a link.* When adding one, check which side it takes on rule 4.3 (whether a decided local board stays playable), since that is the contested rule and videos differ.
+
+**Written sources**
+
 - [Ultimate Tic-Tac-Toe Rules - tictactoefree.com](https://tictactoefree.com/ultimate-tic-tac-toe/rules) - the send rule; free choice when sent to a board already won *or* tied; a tied local board forms part of no three-in-a-row; overall draw when no global line is made.
 - [Tic-tac-toe variants - Wikipedia](https://en.wikipedia.org/wiki/Tic-tac-toe_variants) - structural definition of the nine-board game.
 - [Ultimate Tic-Tac-Toe - BoardGameGeek](https://boardgamegeek.com/boardgame/42336/ultimate-tic-tac-toe) - game entry and rule discussion.

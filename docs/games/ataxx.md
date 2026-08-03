@@ -210,6 +210,12 @@ make our figure incomparable with the external reference.
 
 ## 8. References
 
+**Video explanation**
+
+- *TODO - add a link.* When adding one, note whether it demonstrates the blocked-square variant, since that changes the board from 47 to 49 playable cells (see 6.1).
+
+**Written sources**
+
 - [Ataxx - Rules (pressibus.org)](http://www.pressibus.org/ataxx/gen/gbregles.html) - clone and jump moves, conversion of all adjacent enemy pieces, forced passing, blocked-square variant, scoring by piece count.
 - [Ataxx - igGameCenter](https://www.iggamecenter.com/en/rules/ataxx) - concise standard rule statement; passing notation; game ends when the board is full.
 - [Ataxx - GamesCrafters, UC Berkeley](https://gamescrafters.berkeley.edu/site-legacy-archive-sp20/games.php?game=ataxx) - academic treatment of the game.

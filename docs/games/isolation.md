@@ -197,6 +197,12 @@ from the original than we need to.
 
 ## 8. References
 
+**Video explanation**
+
+- [How to play Isolation (YouTube)](https://www.youtube.com/watch?v=ix99WlP4NVk) - walkthrough of the original game. Note that it demonstrates the **published** ruleset (6x8, king-step, remove any tile), not our variant; use it for the feel of the game, and section 4 above for what we implement.
+
+**Written sources**
+
 - [Isolation (board game) - Wikipedia](https://en.wikipedia.org/wiki/Isolation_(board_game)) - rules of the 1972 original: 6x8, move one square, then remove any tile.
 - [Isolation - BoardGameGeek](https://boardgamegeek.com/boardgame/1875/isolation) - publication data and component list.
 - [Isolation from Lakeside (1972) - Toy Tales](https://toytales.ca/isolation-from-lakeside-1972/) - board photographs, 46 tiles, platform/hole starting squares.
