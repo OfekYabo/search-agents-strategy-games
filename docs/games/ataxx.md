@@ -6,15 +6,32 @@
 
 ---
 
-## 1. Provenance and a naming correction
+## 1. Provenance and naming
 
-The game is **Ataxx** - two x's - an arcade title released by Leland Corporation in
-1990. PLAN.md and the README currently spell it "Attax" throughout. That is a
-misspelling, and it matters here for a specific reason: this project imports an
-external complexity figure for the game (average branching factor ~60, average game
-length ~100 plies). A report that cites a figure for a game whose name it
-consistently misspells invites the reader to doubt the citation. **The spelling is
-corrected to "Ataxx" repo-wide.**
+The game was invented in 1988 by **Dave Crummack and Craig Galley** for Wise Owl
+Software, under the name **Infection**. Wise Owl sold the rights to Virgin
+Mastertronic, which licensed the game to Leland Corporation; Leland released it as
+the arcade title **Ataxx** in 1990. Virgin separately published its own version as
+**Spot** (NES, PC, Game Boy), and the same game appears as the "Microscope Puzzle"
+in the 1993 CD-ROM game *The 7th Guest*.
+
+**We use the name "Ataxx".** It is the name used throughout the game-AI and
+game-search literature, it is the title of the game's Wikipedia article, and it is
+what current online implementations use - so it is both the most common and the most
+current choice.
+
+Other names in circulation are recorded here only so that sources found under them
+are recognisable as the same game: *Infection* (the 1988 original), *Spot*,
+*SlimeWars*, *Frog Cloning*. **Assimilation** is a shareware *variant* with modified
+mechanics rather than another name for the same game, and its rules should not be
+used as a source.
+
+> **Spelling.** PLAN.md and the README currently write "Attax" throughout. That is
+> not one of the game's names - it is a typo. It matters because this project imports
+> an external complexity figure for the game (average branching factor ~60, average
+> game length ~100 plies); a report citing a figure for a game whose name it
+> consistently misspells invites doubt about the citation. **Corrected to "Ataxx"
+> repo-wide.**
 
 Our ruleset is faithful to standard Ataxx with one declared deviation: we use **no
 blocked squares** (section 6.1).
@@ -64,6 +81,21 @@ rotation and neither player starts with a positional edge.
 - **Jump.** Choose one of your pieces and an empty cell at Chebyshev distance
   *exactly* 2 from it. That piece moves there; its original cell becomes empty. Your
   piece count is unchanged.
+
+The two move sets, drawn around a piece at `P`:
+
+```
+    J  J  J  J  J        C = clone destination  (Chebyshev distance 1,  8 cells)
+    J  C  C  C  J        J = jump destination   (Chebyshev distance 2, 16 cells)
+    J  C  P  C  J
+    J  C  C  C  J        All 24 cells are candidates; only the empty ones
+    J  J  J  J  J        are legal.
+```
+
+**The 16 jump cells are the whole outer ring** - the 8 straight and diagonal
+two-steps *and* the 8 knight-shaped cells. Rule statements that describe the jump as
+"a knight move" or as "two spaces in a straight line" each name only half the ring;
+both halves are legal. Implementing only one half is an easy and silent bug (see 7).
 
 **4.2 Move identity, and why it matters.** A clone is fully determined by its
 **destination** - cloning into cell `X` produces the same resulting position no
@@ -194,6 +226,11 @@ make our figure incomparable with the external reference.
 
 ## 7. Implementation notes
 
+- Generate both move sets by scanning the offsets `dr, dc` in `-2..2` excluding
+  `(0,0)`, and classifying by `max(abs(dr), abs(dc))`: `1` is a clone, `2` is a jump.
+  This yields all 8 clone and all 16 jump cells with no special-casing, and avoids
+  the common bug of enumerating jumps as eight hand-written straight-line offsets,
+  which silently drops the eight knight-shaped destinations.
 - Move generation should collect clone destinations in a `set` and jump moves in a
   `list`, then concatenate - this gives the deduplication in 4.2 for free.
 - Conversion touches at most 8 cells and never changes the occupied count, which
@@ -210,12 +247,17 @@ make our figure incomparable with the external reference.
 
 ## 8. References
 
+**Playable reference**
+
+- [Ataxx - onlinesologames.com](https://www.onlinesologames.com/ataxx) - a playable implementation matching our variant: 7x7, corner start, no blocked squares, forced passing, ends when the board fills or a player is eliminated. Useful for getting a feel for the game and for eyeballing our move generator against. Note its jump description ("an L-shaped jump, identical to a knight move in Chess") names only half the legal ring - see 4.1.
+
 **Video explanation**
 
 - *TODO - add a link.* When adding one, note whether it demonstrates the blocked-square variant, since that changes the board from 47 to 49 playable cells (see 6.1).
 
 **Written sources**
 
+- [Ataxx - Wikipedia](https://en.wikipedia.org/wiki/Ataxx) - naming, and the 1988 *Infection* origin through to the 1990 Leland arcade release.
 - [Ataxx - Rules (pressibus.org)](http://www.pressibus.org/ataxx/gen/gbregles.html) - clone and jump moves, conversion of all adjacent enemy pieces, forced passing, blocked-square variant, scoring by piece count.
 - [Ataxx - igGameCenter](https://www.iggamecenter.com/en/rules/ataxx) - concise standard rule statement; passing notation; game ends when the board is full.
 - [Ataxx - GamesCrafters, UC Berkeley](https://gamescrafters.berkeley.edu/site-legacy-archive-sp20/games.php?game=ataxx) - academic treatment of the game.
