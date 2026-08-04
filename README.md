@@ -17,7 +17,7 @@ How do exact tree search and sampling-based search compare in playing strength, 
 | Game | State-space (approx.) | Role |
 |---|---|---|
 | Isolation 5x5 | ~1.0 x 10^10 | Small domain |
-| Attax 7x7 | ~4.8 x 10^23 | Medium domain |
+| Ataxx 7x7 | ~4.8 x 10^23 | Medium domain |
 | Ultimate Tic-Tac-Toe | ~8.9 x 10^38 | Large domain |
 
 ---
@@ -58,7 +58,7 @@ All search agents operate under a shared per-move time budget and a bounded memo
 ```
 search-agents-strategy-games/
 - agents/          # Agent implementations (Random, Heuristic, Alpha-Beta, MCTS)
-- games/           # Custom game logic (Isolation, Attax, Ultimate Tic-Tac-Toe)
+- games/           # Custom game logic (Isolation, Ataxx, Ultimate Tic-Tac-Toe)
 - experiments/     # Tournament runner, calibration pilot, logging
 - results/         # CSV logs and generated graphs
 - report/          # Final report

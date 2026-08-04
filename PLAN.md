@@ -27,7 +27,7 @@ Benchmarked against a random baseline and a no-search heuristic baseline.
 | Game | Board | State-space upper bound | log10 | Role |
 |---|---|---|---|---|
 | Isolation 5x5 | 5x5 grid | 2 x 25 x 24 x 2^23 ~ 1.01 x 10^10 | 10.0 | Small domain |
-| Attax 7x7 | 7x7 grid | 2 x 3^49 ~ 4.78 x 10^23 | 23.7 | Medium domain |
+| Ataxx 7x7 | 7x7 grid | 2 x 3^49 ~ 4.78 x 10^23 | 23.7 | Medium domain |
 | Ultimate Tic-Tac-Toe | 9x(3x3) | 2 x 3^81 ~ 8.89 x 10^38 | 38.9 | Large domain |
 
 ### State-Space Derivations (verified)
@@ -35,7 +35,7 @@ Benchmarked against a random baseline and a no-search heuristic baseline.
 **Isolation 5x5:** 25 cells; player A on any of 25, player B on any remaining 24, each of the other 23 cells independently open/blocked (2^23), times 2 for whose turn:  
 `2 x 25 x 24 x 2^23 = 10,066,329,600 ~ 1.01 x 10^10`
 
-**Attax 7x7:** 49 cells, each in 3 states (empty / P1 / P2): `3^49 ~ 2.39 x 10^23`, times 2:  
+**Ataxx 7x7:** 49 cells, each in 3 states (empty / P1 / P2): `3^49 ~ 2.39 x 10^23`, times 2:  
 `2 x 3^49 ~ 4.78 x 10^23`
 
 **Ultimate Tic-Tac-Toe:** 81 cells (9 boards x 9), each in 3 states: `3^81 ~ 4.44 x 10^38`, times 2:  
@@ -48,14 +48,14 @@ All three are loose upper bounds (do not exclude unreachable states).
 | Game | State-space (approx.) | log10 | Branching factor (avg) | Avg game length (plies) |
 |---|---|---|---|---|
 | Isolation 5x5 | 1.01 x 10^10 | 10.0 | TODO - pending movement rule confirmation | TODO - pending simulation |
-| Attax 7x7 | 4.78 x 10^23 | 23.7 | TODO - pending simulation (reference: ~60 for canonical Ataxx) | TODO - pending simulation (reference: ~100 for canonical Ataxx) |
+| Ataxx 7x7 | 4.78 x 10^23 | 23.7 | TODO - pending simulation (reference: ~60 for canonical Ataxx) | TODO - pending simulation (reference: ~100 for canonical Ataxx) |
 | Ultimate Tic-Tac-Toe | 8.89 x 10^38 | 38.9 | TODO - pending simulation (common case bounded by 9) | TODO - pending simulation |
 
 ### Branching Factor
 
 Not a fixed constant - changes through the game. **Measure empirically** via random self-play simulation (batch of N=1000 games per game type, record legal-move count distribution at every ply). This is a natural byproduct of building the random agent.
 
-External reference for Attax: canonical Ataxx (7x7 with two fixed blocked squares) has average branching factor ~60 and average game length ~100 plies.
+External reference for Ataxx: canonical Ataxx (7x7 with two fixed blocked squares) has average branching factor ~60 and average game length ~100 plies.
 
 > **TODO:** Finalize Isolation 5x5 movement rule - options are:
 > - King-step (one cell in any of 8 directions): branching factor bounded by 8 throughout, shrinks as cells become blocked
@@ -68,7 +68,7 @@ External reference for Attax: canonical Ataxx (7x7 with two fixed blocked square
 
 **Isolation 5x5:** Two players each control one piece on a 5x5 grid. On each turn a player moves their piece to a legal cell, and the cell they just left becomes permanently blocked. A player with no legal move loses.
 
-**Attax 7x7:** On a 7x7 grid, a player can either clone their piece to an adjacent empty cell (the original stays), or jump two cells away to an empty cell (the original is removed). After moving, all opponent pieces adjacent to the destination are converted to the current player's color. A player with no pieces or no legal move loses.
+**Ataxx 7x7:** On a 7x7 grid, a player can either clone their piece to an adjacent empty cell (the original stays), or jump two cells away to an empty cell (the original is removed). After moving, all opponent pieces adjacent to the destination are converted to the current player's color. A player with no pieces or no legal move loses.
 
 **Ultimate Tic-Tac-Toe:** Nine 3x3 boards arranged in a 3x3 super-grid. Playing in cell (r, c) of any small board forces the opponent to play next in the small board at super-position (r, c). Winning three small boards in a row on the super-grid wins the game. When sent to a finished board, the player may move anywhere.
 
@@ -97,7 +97,7 @@ Evaluates each legal move with a domain-specific function, picks best-scoring wi
 
 Starter evaluation functions (to be tuned during development):
 - **Isolation:** own legal-move count minus opponent legal-move count (mobility difference)
-- **Attax:** piece-count difference + number of opponent pieces immediately convertible by the candidate move + positional stability term
+- **Ataxx:** piece-count difference + number of opponent pieces immediately convertible by the candidate move + positional stability term
 - **Ultimate Tic-Tac-Toe:** small boards won (weighted) + in-board threats (two-in-a-row with third cell open) - blocked opponent threats + bonus for center/corner boards
 
 #### Enhanced Alpha-Beta
@@ -162,7 +162,7 @@ Budgets cannot be chosen a priori. Procedure per game:
 | Game | Easy | Main (balanced) | Hard |
 |---|---|---|---|
 | Isolation 5x5 | TODO | TODO | TODO |
-| Attax 7x7 | TODO | TODO | TODO |
+| Ataxx 7x7 | TODO | TODO | TODO |
 | Ultimate Tic-Tac-Toe | TODO | TODO | TODO |
 
 ---
@@ -186,7 +186,7 @@ Budgets cannot be chosen a priori. Procedure per game:
 - Average move time and nodes-expanded / simulations-run per agent
 - Move-tag distribution per agent, per game, per config
 - Average search depth reached by Alpha-Beta
-- Scaling behavior: how all the above shift from Isolation -> Attax -> Ultimate Tic-Tac-Toe
+- Scaling behavior: how all the above shift from Isolation -> Ataxx -> Ultimate Tic-Tac-Toe
 
 ### Results Output
 - Every game logged to **CSV** (one row per move or per game depending on metric)
@@ -226,7 +226,7 @@ If OpenSpiel setup is too heavy:
 | Core Alpha-Beta / Negamax search logic | Framework (OpenSpiel or easyAI) |
 | Core MCTS selection / expansion / backprop | Framework (OpenSpiel or reference) |
 | Isolation 5x5 game implementation | Ours |
-| Attax 7x7 game implementation | Ours |
+| Ataxx 7x7 game implementation | Ours |
 | Ultimate Tic-Tac-Toe game implementation | Ours |
 | Evaluation functions per game | Ours |
 | Time budget / memory cap wrapper | Ours |
