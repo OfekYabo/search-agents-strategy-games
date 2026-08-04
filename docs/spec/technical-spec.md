@@ -140,7 +140,18 @@ class AtaxxState:
   destination's 8-neighbourhood by mask. Recompute `plies_since_progress`: reset to 0
   on a clone or on any conversion, else increment. **A pass increments it.**
 - `is_terminal` - board full, or either player at zero pieces, or
-  `plies_since_progress >= 30`, or ply count `>= 300`.
+  `plies_since_progress >= 30`.
+
+> **The 300-ply hard cap is a runner-level guard, not a game rule. [GAP - now
+> resolved]** Enforcing it inside `is_terminal` would require the *total* ply count in
+> the state, and therefore in the transposition-table key - which would make every
+> position at a different ply count a distinct entry and **destroy the transposition
+> table's entire purpose**. The 30-ply no-progress counter is genuinely part of the
+> position and stays in the state; the 300-ply cap is a safety net enforced by
+> `runner.play_game`, which ends the game and scores it by piece count. Search does not
+> model it, which is acceptable because [`ataxx.md` §4.6](../games/ataxx.md) chose 300
+> precisely so it should essentially never fire. Games ending this way are logged with
+> `end_reason = "ply_cap"` so that "essentially never" is verified rather than assumed.
 - `result` - by piece count; equal counts draw. Note a **full board can never draw**
   (49 is odd), so draws imply the game ended early.
 - Move string - `"b6"` clone, `"a7c5"` jump, `"--"` pass.
@@ -215,6 +226,30 @@ class SearchContext:
 `should_stop()` polls the clock only every `check_every` invocations, per PLAN.md's
 "check every ~500-1000 nodes" requirement, so timing overhead stays negligible.
 
+### 4.2b Memory caps must be calibrated, not guessed **[GAP - now specified]**
+
+PLAN.md requires a memory cap and a `memory-limited` tag but **never says how large the
+cap is**. This is not a detail: if `max_nodes` and `max_entries` are set generously, the
+cap never binds, the `memory-limited` tag never fires, and **an entire dimension of the
+study silently disappears** - we would report a four-value taxonomy with one value
+permanently empty.
+
+The caps are therefore **calibrated exactly like the time budgets**, in the same pilot:
+
+| Agent | Capped structure | Cap parameter |
+|---|---|---|
+| Alpha-Beta | transposition table | `max_entries` |
+| MCTS | search tree | `max_nodes` |
+
+The pilot sweeps candidate caps and records the resulting tag distribution. The chosen
+cap is the one where `memory-limited` appears **as a meaningful minority** at the main
+time budget - present enough to analyse, not so tight that it dominates and turns the
+experiment into a memory study.
+
+> Report the cap in *entries and nodes*, not bytes. Python object overhead makes a byte
+> figure both unstable and misleading, and the entry count is what actually bounds
+> behaviour.
+
 ### 4.3 Tag precedence **[SIGN-OFF]**
 
 PLAN.md defines the four tags but not what happens when several conditions apply at
@@ -252,6 +287,12 @@ Evaluates each legal move, keeping a running best so a cutoff still yields a val
 move. Calls `completed()` only if every move was evaluated. Uses the **same evaluator**
 as Alpha-Beta's horizon, so their difference isolates search depth.
 
+**Tie-breaking is by seeded random choice among equal-scoring moves**, not by taking the
+first. *[GAP - now specified]* Taking the first would make the agent's play an artefact
+of `legal_moves` ordering - and since that ordering exists to help Alpha-Beta prune
+(2.2), the Heuristic agent would silently inherit Alpha-Beta's move-ordering heuristic
+as a tiebreak. Determinism is preserved through the per-game seed (7.2).
+
 ### 5.3 Enhanced Alpha-Beta
 
 Negamax with alpha-beta, iterative deepening, a capped transposition table, and move
@@ -279,17 +320,61 @@ returned move is always from the last fully completed depth.
 Standard four phases, UCB1 selection with `C = sqrt(2)` over values in `[0, 1]`.
 Returns the **most-visited** root child.
 
-Two decisions PLAN.md leaves open:
+**Rollout policy.** Pure random rollouts are weak; pure greedy rollouts are
+deterministic and collapse rollout diversity, which destroys the Monte Carlo estimate.
+Specified: **epsilon-greedy** - with probability `epsilon` a uniformly random move,
+otherwise the evaluator's best among at most `k` randomly sampled moves, bounding
+per-step cost in wide positions.
 
-**Rollout policy [SIGN-OFF].** Pure random rollouts are known to be weak; pure greedy
-rollouts are deterministic and collapse diversity. Specified: **epsilon-greedy**, with
-`epsilon = 0.25` random and otherwise the evaluator's best move, scoring at most `k = 8`
-randomly sampled moves per rollout step to bound cost in wide positions like Ataxx.
+**Rollout depth.** Rolling out to terminal costs ~100 plies in Ataxx. Specified:
+**truncate at `D` plies** and return the evaluator's value mapped to `[0, 1]`.
 
-**Rollout depth [SIGN-OFF].** Rolling out to a terminal state costs ~100 plies in
-Ataxx. Specified: **truncate at `D = 40` plies** and return the evaluator's value
-(mapped to `[0, 1]`). Both `epsilon` and `D` are configuration parameters, and the pilot
-can revisit them.
+### 5.5 Where the MCTS constants come from **[GAP - now specified]**
+
+An earlier draft asserted `epsilon = 0.25`, `k = 8`, `D = 40` as if they were
+established values. **They are not, and the report must not present them that way.**
+The honest position, separated by what can and cannot be cited:
+
+| Constant | Status |
+|---|---|
+| `C = sqrt(2)` | **Citable.** Follows from the UCB1 regret bound (Auer, Cesa-Bianchi and Fischer, 2002) as applied to trees by Kocsis and Szepesvari (2006). Assumes rewards in `[0, 1]`, which is exactly why 2.3 maps them. The exact constant depends on how the formula is written, so **state our formula explicitly in the report**. |
+| `epsilon`, `k`, `D` | **Not citable.** These are domain-tuned hyperparameters everywhere in the literature; Browne et al. (2012), *A Survey of Monte Carlo Tree Search Methods*, IEEE TCIAIG, catalogues the design space precisely because no universal setting exists. |
+
+**Therefore they are measured, not asserted.** The calibration pilot is extended with a
+small MCTS hyperparameter sweep: vary one parameter at a time against a **fixed
+Alpha-Beta opponent** at the main time budget, and select on win rate. This turns "we
+chose 0.25" into a reported result with numbers behind it.
+
+Starting candidates: `epsilon in {0.1, 0.25, 0.5}`, `D in {20, 40, terminal}`, `k = 8`
+held fixed (it only binds on Ataxx, so it is swept only if Ataxx results look
+anomalous).
+
+### 5.6 The constants are shared across all three games **[SIGN-OFF]**
+
+**This is a methodological requirement, not a convenience.**
+
+Alpha-Beta has no rollout hyperparameters to tune. If MCTS were tuned per game and
+Alpha-Beta were not, MCTS would carry a per-domain advantage that varies with the
+domain - and the scaling conclusion becomes uninterpretable, because "MCTS scales
+better" could not be separated from "we tuned MCTS harder on that game". Since the
+scaling comparison *is* the research question, that confound is fatal.
+
+Note that fixed constants already produce genuinely different behaviour per game,
+because the games differ:
+
+| | Isolation (b~8, <=23 plies) | UTTT (b~7, ~50 plies) | Ataxx (b~60, ~100 plies) |
+|---|---|---|---|
+| `k = 8` | scores every move | scores every move | samples 8 of ~60 |
+| `D = 40` | never binds - full rollouts | binds sometimes | binds usually |
+
+That is the honest form of uniformity: one rule, applied identically, adapting because
+the domains differ.
+
+**The risk, and its mitigation.** A shared value could be badly wrong for one game,
+handicapping MCTS there and manufacturing a false "MCTS scales badly" conclusion. The
+sweep therefore reports **per-game sensitivity**, not just the pooled winner, so a
+domain where the shared choice is clearly poor is visible rather than silently baked
+into the result.
 
 - **Node cap** - the tree is capped at `max_nodes`; on reaching it, expansion stops
   (selection and backpropagation continue) and `ctx.hit_memory_cap()` is called.
@@ -335,11 +420,24 @@ single game individually reproducible for debugging without re-running the tourn
 
 ### 7.3 `calibrate.py`
 
-For each game, plays Alpha-Beta vs MCTS across candidate budgets
+Three phases, run in order. Each produces numbers the report can cite.
+
+**Phase 1 - time budgets.** For each game, Alpha-Beta vs MCTS across candidate budgets
 `[0.1, 0.25, 0.5, 1, 2, 5]` s, recording the tag distribution and **real
-seconds-per-game**. Outputs the easy/main/hard budgets *and* a projected total runtime
-for the full grid, so the grid can be sized against the calendar with measured numbers
-rather than estimates.
+seconds-per-game**. Outputs the easy/main/hard budgets.
+
+**Phase 2 - memory caps (4.2b).** Sweep `max_entries` and `max_nodes` at the chosen main
+budget, and select caps where `memory-limited` appears as a meaningful minority.
+**Without this phase the `memory-limited` tag never fires and a quarter of the tag
+taxonomy is dead.**
+
+**Phase 3 - MCTS hyperparameters (5.5).** Sweep `epsilon` and `D` against a fixed
+Alpha-Beta opponent, one parameter at a time, reporting win rate **per game as well as
+pooled** so a domain where the shared choice is poor stays visible.
+
+**Final output: a projected total runtime for the full grid**, from measured
+seconds-per-game rather than estimates - which is what lets the grid be sized against
+the calendar (PLAN.md's fallback ladder).
 
 ### 7.4 `tournament.py`
 
@@ -349,7 +447,23 @@ Runs the grid from PLAN.md: 3 games x 6 pairings x 2 seat orders x configs x `T`
 background load affects every agent equally. This is a correctness requirement of the
 methodology, not an optimisation.
 
-Supports `--resume` from an existing CSV so an interrupted overnight run is not lost.
+Supports `--resume` from an existing CSV so an interrupted overnight run is not lost;
+completed `game_id`s are read back and skipped.
+
+**Parallelism [GAP - now specified].** Games are independent, so the grid parallelises
+perfectly - but this is a *timing* experiment, and contended cores would corrupt exactly
+the quantity being measured. Specified:
+
+- `--workers N` defaults to **1**, and a single-worker run is the reference result.
+- With `N > 1`, **one worker per physical core, leaving at least one core for the host**,
+  and workers pinned where the OS allows it.
+- **The worker count is recorded in `games.csv`.** If the pilot shows the per-move timing
+  distribution shifting between `N=1` and `N>1`, the parallel results are not comparable
+  to the sequential ones and the run must be sequential.
+
+Given the measured budgets, the full grid is expected to be an overnight run at `N=1`,
+so parallelism should be treated as a fallback for a squeezed schedule rather than the
+default.
 
 ---
 
@@ -377,11 +491,52 @@ Two files, because the natural row differs.
 |---|---|
 | `game_id`, `ply`, `agent`, `side` | |
 | `tag` | normal / time-limited / memory-limited / error |
-| `elapsed_s`, `nodes`, `depth` | `depth` empty for non-AB agents |
+| `elapsed_s` | wall-clock for this decision |
+| `nodes` | Alpha-Beta nodes expanded; **empty for MCTS** |
+| `simulations` | MCTS rollouts run; **empty for Alpha-Beta** |
+| `depth` | deepest completed iteration; Alpha-Beta only |
 | `move` | the round-trippable move string |
 | `legal_move_count` | **this is the branching-factor measurement**, free here |
 
+> **`nodes` and `simulations` are deliberately separate columns. [GAP - now fixed]** An
+> earlier draft pooled them into one, which would have silently invited the analysis to
+> compare them. **An Alpha-Beta node and an MCTS simulation are not the same unit of
+> work** - one is a static evaluation at a horizon, the other a rollout of up to `D`
+> plies. Any figure plotting "work done" must not put them on a shared axis, and
+> separate columns make that mistake hard to commit by accident.
+
 Logging is **streamed and flushed per game**, so an interrupted run keeps its data.
+
+---
+
+## 8b. Analysis and statistics **[GAP - now specified]**
+
+PLAN.md names the metrics but not how draws are handled, and with draws present that
+ambiguity changes the headline numbers.
+
+**Scoring.** Report **both**, because they answer different questions:
+
+- **Score rate** = `(wins + 0.5 * draws) / games` - the standard tournament measure, and
+  the right one for ranking agents.
+- **Win / draw / loss rates** separately - because a draw-heavy result is itself a
+  finding, and score rate hides it. UTTT in particular is expected to draw often, while
+  Isolation cannot draw at all.
+
+Never report "win rate" alone without saying which of these is meant.
+
+**First-move advantage.** PLAN.md specifies a binomial test against a 50/50 null, which
+is undefined when draws exist. Specified: **exclude draws and test the decisive games
+only** - null `p = 0.5` on `wins_first / (wins_first + wins_second)`. Report the number
+of excluded draws alongside, since a test on 20 decisive games out of 100 is much weaker
+than it looks, and a reader must be able to see that.
+
+**Aggregation levels.** Global (all pairings pooled), per pairing, per game, per config.
+The global test is the well-powered one; per-pairing claims at low `T` should be
+reported with their confidence intervals rather than as bare percentages.
+
+**Excluded from all statistics:** moves tagged `error`, and the games containing them,
+per PLAN.md. Both counts are reported separately - a nonzero error count is a bug
+report, not a data point.
 
 ---
 
@@ -428,9 +583,13 @@ dependency has tests passing.
 6. Alpha-Beta
 7. MCTS
 8. Real evaluation functions for all three games
-9. `calibrate.py` -> **run the pilot**
-10. `tournament.py` -> **run the tournament**
-11. `analyse.py` -> tables and figures
+9. **Validation gate** - measure Ataxx branching factor per ply with the random agent and
+   check it against Ribeiro and Figueiredo (section 9). **Do not proceed past this step
+   on a flat curve.**
+10. `calibrate.py` -> **run the pilot** (all three phases: time budgets, memory caps,
+    MCTS hyperparameters)
+11. `tournament.py` -> **run the tournament**
+12. `analyse.py` -> tables and figures per section 8b
 
 Step 2 deliberately precedes the harder games: Isolation is simple enough that any
 interface mistake surfaces cheaply, while discovering the same mistake inside Ataxx
