@@ -214,13 +214,30 @@ so no experiment can hang. Both numbers are proposals and need confirmation.
 Loose, as usual: it counts positions unreachable from the fixed start, and positions
 where one colour has no pieces yet play continues.
 
+A **tighter published figure** for the same 7x7 board is `5.982483 x 10^22`
+(log10 22.8), which excludes end-game positions where every remaining piece is one
+colour. It is about a quarter of our `3^49` term, so the two are consistent - ours is
+simply the looser bound. Keep `2 x 3^49` as the headline for form-consistency with
+the other two games, and cite the tighter figure alongside it. The same source gives
+a game-tree complexity of `1.371545 x 10^896`. See 9.2 for how much weight that
+source can carry.
+
 **5.2 Branching factor.**
 
-| Quantity | Value | Derivation |
+| Quantity | Value | Source |
 |---|---|---|
-| Upper bound | **<= 17e** (`<= 765`) | see below; `e` = empty cells, at most 45 |
-| Typical average | **~60** | External reference for canonical Ataxx (see 6.1 for the caveat) |
-| Our average | *pending* | To be measured by the random agent against the tested implementation |
+| Upper bound | **<= 17e** (`<= 765`) | derived below; `e` = empty cells, at most 45 |
+| Ply 1, measured | **~20** | Ribeiro and Figueiredo 2018 |
+| Peak, measured | **92** around ply 25; **~90** again around ply 52 | Ribeiro and Figueiredo 2018 |
+| Typical average | **~60** | old Wikipedia revision - **not peer-reviewed**, see 9.2 |
+| Our average | *pending* | to be measured by the random agent against the tested implementation |
+
+The measured figures from Ribeiro and Figueiredo are the better reference: they are
+peer-reviewed, and their shape is informative in its own right. Branching factor is
+**not monotonic** - it starts near 20, roughly quadruples to a mid-game peak of 92,
+falls, and peaks again near ply 52. Our own measurement should reproduce that
+double-humped curve; if it comes out flat, the move generator is wrong. This makes
+them a far better validation target than a single average.
 
 The bound follows cleanly from move identity (4.2): **every legal move lands on an
 empty cell**, and a given empty cell can be the destination of *at most one*
@@ -257,14 +274,21 @@ two orderings genuinely disagree.
 ## 6. Alternatives considered and rejected
 
 **6.1 Blocked squares.** The arcade original and several implementations support
-symmetrically-placed blocked cells, and the ~60 / ~100 reference figure quoted in
-PLAN.md is for a 7x7 board *with two blocked squares*. *Rejected:* blocked squares
-are an optional variant, they add a board-configuration parameter we have no reason
-to vary, and omitting them keeps the `3^49` state-space derivation exact in form.
-**The consequence must be stated in the report:** our variant has 49 playable cells
-against the reference's 47, so our measured branching factor and game length should
-come out slightly *above* ~60 / ~100. The reference is a sanity check on our
-measurement, not a target it must match.
+symmetrically-placed blocked cells. *Rejected:* they are an optional variant, they add
+a board-configuration parameter we have no reason to vary, and omitting them keeps the
+`3^49` state-space derivation exact in form.
+
+> **Correction to PLAN.md.** PLAN.md line 58 attributes the ~60 / ~100 figures to
+> "canonical Ataxx (7x7 with two fixed blocked squares)". **That attribution is not
+> supported by any source we could find.** The source of those numbers describes a
+> *standard* 7x7 board and does not mention blocked squares at all, and the
+> peer-reviewed measurements in 5.2 are likewise on an unobstructed board. The
+> parenthetical should be removed rather than corrected, since there is no
+> blocked-square reference to point at.
+
+Because our board and the reference boards are both unobstructed 49-cell boards, our
+measurements should be *directly* comparable rather than needing an adjustment - which
+is a better position than the one PLAN.md assumed.
 
 **6.2 Treating "no legal move" as a loss** (what PLAN.md currently says). *Rejected:*
 it contradicts the published rules, and it is not a harmless simplification - it
@@ -333,9 +357,21 @@ make our figure incomparable with the external reference.
 
 - [Ataxx explained (YouTube)](https://www.youtube.com/watch?v=lXNcRy9DZxs) - walkthrough of clone and jump moves and the conversion rule.
 
+**Academic sources**
+
+- **Ribeiro, L. and Figueiredo, D. R.** *Performance of Monte Carlo Tree Search Algorithms when Playing the Game Ataxx.* XV Encontro Nacional de Inteligencia Artificial e Computacional (ENIAC 2018), Sao Paulo, Brazil, October 2018. DOI [10.5753/eniac.2018.4423](https://doi.org/10.5753/eniac.2018.4423).
+  - [Publisher page (SBC OpenLib, open access)](https://sol.sbc.org.br/index.php/eniac/article/view/4423) | [Author's PDF](https://leoribeiro.github.io/papers/mcts-ataxx-eniac2018.pdf) | [Semantic Scholar](https://www.semanticscholar.org/paper/Performance-of-Monte-Carlo-Tree-Search-Algorithms-Ribeiro-Figueiredo/fedbf0da6588ebd075d13ca7dbcaa2976e89338e)
+  - **Archived locally:** [`docs/references/ribeiro-figueiredo-2018-mcts-ataxx.pdf`](../references/ribeiro-figueiredo-2018-mcts-ataxx.pdf)
+  - Our primary source for measured branching factors (5.2), and directly relevant related work - it evaluates MCTS variants on this exact game.
+- [leoribeiro/mcts-ataxx (GitHub)](https://github.com/leoribeiro/mcts-ataxx) - the authors' MCTS implementation for Ataxx. Useful as an independent implementation to cross-check our move generator and measured branching factors against.
+
+**Complexity figures of uncertain provenance**
+
+- [Ataxx - en-academic (mirror of a former Wikipedia revision)](https://en-academic.com/dic.nsf/enwiki/219355) - source of the widely-repeated "average ~100 plies, average branching factor ~60" figures, plus a state-space complexity of `5.982483 x 10^22` and a game-tree complexity of `1.371545 x 10^896` for the 7x7 board. **Not peer-reviewed**, and the corresponding section has since been removed from Wikipedia. See 9.2 before citing any of these.
+
 **Written sources**
 
-- [Ataxx - Wikipedia](https://en.wikipedia.org/wiki/Ataxx) - naming, and the 1988 *Infection* origin through to the 1990 Leland arcade release.
+- [Ataxx - Wikipedia](https://en.wikipedia.org/wiki/Ataxx) - naming, and the 1988 *Infection* origin through to the 1990 Leland arcade release. Note: the current article contains **no** complexity section.
 - [Ataxx - Rules (pressibus.org)](http://www.pressibus.org/ataxx/gen/gbregles.html) - clone and jump moves, conversion of all adjacent enemy pieces, forced passing, blocked-square variant, scoring by piece count.
 - [Ataxx - igGameCenter](https://www.iggamecenter.com/en/rules/ataxx) - concise standard rule statement; passing notation; game ends when the board is full.
 - [Ataxx - GamesCrafters, UC Berkeley](https://gamescrafters.berkeley.edu/site-legacy-archive-sp20/games.php?game=ataxx) - academic treatment of the game.
@@ -352,14 +388,32 @@ two numbers - 50 plies without progress, 400 plies hard cap - are unconfirmed
 proposals. This blocks implementation, because without *some* cutoff a tournament run
 can hang.
 
-**9.2 The `~60` / `~100` reference figures need a real citation. [BLOCKING for the
-report, not for code]** PLAN.md asserts that canonical Ataxx has average branching
-factor ~60 and average game length ~100 plies, and attributes them to a 7x7 board
-with two fixed blocked squares. **We have not verified that attribution against a
-primary source.** None of the references in section 8 states those numbers. For an
-academic report this is the weakest link in the document: it is the one external
-quantitative claim we make, and it is currently uncited. Either find the source, or
-drop the comparison and rely solely on our own measurement.
+**9.2 Provenance of the `~60` / `~100` figures. [RESOLVED - action required in
+PLAN.md]**
+
+Traced. The numbers come from a **complexity section of the Wikipedia article on
+Ataxx that no longer exists** - the current article has no such section, and the text
+survives only in mirrors of an old revision. That means:
+
+- They are **not peer-reviewed** and carry no primary citation of their own. Citing
+  them in an academic report as though they were an established result would be
+  indefensible; cite them as an unsourced estimate, or not at all.
+- The attribution to a board "with two fixed blocked squares" is **unsupported** -
+  the source says a standard 7x7 board. PLAN.md line 58 needs that parenthetical
+  removed (see 6.1).
+
+A **genuine peer-reviewed replacement exists** and is now the primary reference:
+Ribeiro and Figueiredo, ENIAC 2018 (section 8), which reports *measured* branching
+factors on 7x7 Ataxx - ~20 at ply 1, peaking at 92 near ply 25 and ~90 near ply 52.
+A copy is archived at [`docs/references/`](../references/). This is strictly better
+for our purposes than a single average, because the shape of the curve gives us a
+validation target for our own move generator.
+
+The paper is also **directly relevant to the project's research question** - it
+evaluates MCTS variants on Ataxx specifically - and should be read in full and cited
+in the related-work section, not merely mined for a branching factor. *Note: the
+figures above come from the paper's abstract and indexing metadata; the archived PDF
+has not yet been read end to end.*
 
 **9.3 Terminal reward scale. [BLOCKING, and shared across all three games]** Ataxx
 has a natural margin - the piece difference - so a terminal position can be scored
