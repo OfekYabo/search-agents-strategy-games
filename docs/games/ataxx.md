@@ -1,9 +1,7 @@
 # Gamebook: Ataxx 7x7 (no blocked squares)
 
 > Role in this project: **medium domain** (log10 state space ~ 23.7).
-> Status: ruleset **confirmed** except for the termination cutoff in 4.6, which is
-> flagged **OPEN** and needs a decision before implementation. Two further gaps are
-> tracked in section 9.
+> Status: ruleset **confirmed**. Remaining non-blocking gaps tracked in section 9.
 
 ---
 
@@ -172,9 +170,9 @@ keeps the empty count fixed and can still run forever. The two are separate issu
 2. a player has zero pieces (that player loses regardless of count);
 3. both players pass in succession - **unreachable in practice**, see 4.4.1; keep it
    implemented as a defensive assertion rather than as a real exit path;
-4. the no-progress rule in 4.6 fires. **[OPEN - see below]**
+4. the no-progress rule in 4.6 fires - 30 plies without progress, or the 300-ply cap.
 
-**4.6 Termination, and a problem with the naive ruleset.** *[OPEN - needs decision]*
+**4.6 The no-progress rule.** *[CONFIRMED]*
 
 Rules 1-3 alone **do not guarantee the game ends.** A clone raises the occupied-cell
 count by one; a jump leaves it unchanged; conversion leaves it unchanged. So a
@@ -182,18 +180,25 @@ sequence consisting only of jumps can continue indefinitely, shuffling pieces ba
 and forth without ever filling the board. Real Ataxx implementations all impose some
 no-progress cutoff; ours must too, or a tournament run can hang forever.
 
-Proposed rule, mirroring the chess 50-move rule:
+The rule, mirroring the chess 50-move rule:
 
-> Define a ply as **progress** if it is a clone, or if it converted at least one
-> opponent piece. If **50 consecutive plies** occur with no progress, the game ends
+> A ply counts as **progress** if it is a clone, or if it converted at least one
+> opponent piece. If **30 consecutive plies** occur with no progress, the game ends
 > and is scored by piece count exactly as in 4.7.
+>
+> A **hard cap of 300 plies** sits behind it: on reaching it the game ends and is
+> scored the same way. Nothing can hang.
 
 A **pass is not progress** and increments the counter like any other ply - otherwise
 a player stuck passing while the opponent shuffles jumps would stall the counter
 forever, which is precisely the case the rule exists to catch.
 
-A hard cap (e.g. 400 plies, scored the same way) should sit behind it as a safety net
-so no experiment can hang. Both numbers are proposals and need confirmation.
+Both figures are chosen against the measured average game length of ~100 plies (5.2):
+30 plies of pure repositioning is well beyond any plausible genuine manoeuvre, and
+the 300-ply cap is roughly triple a typical game, so it should effectively never fire
+on live play. **Log every game that ends by either rule**, with which one fired - if
+the no-progress rule turns out to fire often, 30 was too tight and the figure needs
+revisiting rather than silently distorting the results.
 
 **4.7 Scoring.** At termination, the player with more pieces wins. Equal counts are a
 **draw**. A player reduced to zero pieces loses.
@@ -249,9 +254,9 @@ ringed by friendly pieces at both distances, while 45 cells stay empty. The ~60
 reference is the number to reason with, and it is the largest average branching
 factor of the three games in this project.
 
-**5.3 Game length.** The canonical reference is ~100 plies average. **There is no
-provable maximum** without the rule in 4.6, for the reason given there. With the
-proposed rule the hard bound is the cap itself.
+**5.3 Game length.** The reference average is ~100 plies. **There is no provable
+maximum** from the published rules alone, for the reason given in 4.6; with our rule
+the hard bound is the **300-ply cap**.
 
 **5.4 A full board can never be a draw.** The 49 cells are odd in number, so when the
 board fills, `n1 + n2 = 49` and the two counts cannot be equal. **Draws are therefore
@@ -383,10 +388,9 @@ make our figure incomparable with the external reference.
 
 Tracked here so nothing is lost between this document and the spec.
 
-**9.1 The termination cutoff (4.6). [BLOCKING]** The rule is agreed in shape but the
-two numbers - 50 plies without progress, 400 plies hard cap - are unconfirmed
-proposals. This blocks implementation, because without *some* cutoff a tournament run
-can hang.
+**9.1 The termination cutoff (4.6). [RESOLVED]** Confirmed at **30 plies without
+progress**, with a **300-ply hard cap** behind it. Both are logged when they fire, so
+a too-tight threshold will show up in the results rather than hide in them.
 
 **9.2 Provenance of the `~60` / `~100` figures. [RESOLVED - action required in
 PLAN.md]**

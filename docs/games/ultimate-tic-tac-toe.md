@@ -1,9 +1,8 @@
 # Gamebook: Ultimate Tic-Tac-Toe
 
-> Role in this project: **large domain** (log10 state space ~ 38.9, or ~39.9 under
-> the corrected bound in section 5.1).
-> Status: ruleset **mostly confirmed**; one item in section 4 is flagged as **OPEN**
-> and needs a decision before implementation.
+> Role in this project: **large domain** (log10 state space ~ 39.9, see 5.1).
+> Status: ruleset **confirmed**. The state-space bound is to be tightened when the
+> game is implemented (5.1).
 
 ---
 
@@ -62,9 +61,9 @@ board `c`.
 it has been won by either player or has been drawn - the send constraint is void and
 the opponent may play in **any undecided local board**.
 
-**4.3 Decided boards are closed.** *[OPEN - needs decision]* Once a local board is
-won or drawn, **no further moves may be played in it**, even if it still has empty
-cells. Its remaining empty cells are dead for the rest of the game.
+**4.3 Decided boards are closed.** *[CONFIRMED]* Once a local board is won or drawn,
+**no further moves may be played in it**, even if it still has empty cells. Its
+remaining empty cells are dead for the rest of the game.
 
 > This is the one genuinely contested rule in the game and the sources disagree by
 > omission - they state the free-choice exception clearly but do not say whether the
@@ -107,11 +106,22 @@ values (nine boards, or unconstrained):
 2  x  10  x  3^81  ~  8.89 x 10^39                        log10 = 39.9
 ```
 
-Recommendation: **adopt the second form**, showing this derivation. It is more
-defensible under questioning, and it barely moves the narrative - the project's span
-goes from ~28.9 to ~29.9 orders of magnitude. Both are loose upper bounds; neither
-excludes unreachable configurations, of which there are very many (for instance any
-position where both players hold a completed line).
+**Adopted: the second form**, shown with this derivation, on the grounds that it is
+simply the more truthful bound. It is more defensible under questioning, and it
+barely moves the narrative - the project's span goes from ~28.9 to ~29.9 orders of
+magnitude.
+
+Both remain loose upper bounds. Neither excludes unreachable configurations, of which
+there are very many - any position where both players hold a completed line, any
+position where one player has played more than one move more than the other, and
+every configuration inside a local board that could not arise from alternating play.
+
+> **To revisit when the game is implemented.** A materially tighter bound is
+> reachable once the rules are in code: counting only local-board configurations
+> legally reachable under alternating play, and accounting for the fact that the send
+> constraint is *determined* by the previous move's cell index rather than free. That
+> work is worth doing properly with the implementation in front of us rather than
+> guessed at now, and it may change the headline figure again.
 
 **5.2 Branching factor.** This is where PLAN.md's "common case bounded by 9" needs
 care:
