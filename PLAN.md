@@ -182,10 +182,41 @@ Record the **hardware and Python version** alongside these values. A time budget
 ## Experimental Design
 
 ### Tournament Structure
+
 - 4 static agents -> 6 unique unordered pairings (C(4,2) = 6)
 - Each pairing: both agents start first an equal number of times -> 12 directed matchups
-- Repeated across multiple trials per matchup for statistical reliability
-- Run across all 3 games and all 3 budget configs (easy / main / hard)
+- Repeated across `T` trials per directed matchup for statistical reliability
+- Run across all 3 games and all budget configs (easy / main / hard)
+
+**The experimental grid.** Every game played is one cell of:
+
+```
+   3 games        x  6 pairings  x  2 seat orders  x  C configs  x  T trials
+```
+
+`T = 30` with 3 configs gives 3,240 games; `T = 20` with 2 configs gives 1,440.
+
+The first three factors are **fixed and not negotiable**: dropping a game destroys the state-space scale axis the research question rests on, dropping a pairing breaks the round robin, and dropping a seat order destroys the first-move-advantage analysis. **`T` and the budget configs are the only levers.**
+
+**`T` and the budget configs do different jobs, and cost differently:**
+
+| Lever | Buys | Cost behaviour |
+|---|---|---|
+| `T` (trials) | statistical confidence - standard error on a win rate is `sqrt(p(1-p)/n)`, so `T=20` gives about +-7.9pp per pairing, `T=30` about +-6.5pp, `T=50` about +-5.0pp | linear |
+| Budget configs | the **degradation story**, which is the project's actual contribution - three points describe a curve, two only a direction | **dominant** - an easy config at 2s/move costs ~20x a hard config at 0.1s/move |
+
+Because cost is dominated by the budget values rather than by `T`, the cheapest useful saving is to *lower* the easy budget rather than to drop the easy config.
+
+> **The grid is a configuration parameter, not a constant.** Its final values are an **output of the calibration pilot**, whose entire job is to measure the tag distribution and real seconds-per-game at each candidate budget on this hardware. Fixing the grid before that measurement would mean guessing at something we are about to measure.
+
+**Fallback ladder if time runs short**, in the order to pull:
+
+1. Lower the easy budget (largest saving per unit of analytical loss)
+2. Reduce `T` (30 -> 20)
+3. Drop the easy config entirely (loses the third degradation point)
+4. *Last resort:* drop a game - this guts the research question and should be treated as project failure rather than scope reduction
+
+> **Expect MCTS to be time-limited almost always.** It is anytime by construction and consumes whatever budget it is given, so the `normal` tag is largely an *Alpha-Beta* phenomenon. The easy config's real function is giving Alpha-Beta enough time to complete iterations. This should be stated in the report rather than discovered by a reader.
 
 ### First-Move Advantage Analysis
 - Win rate recorded separately by starting position (first vs second mover)
@@ -210,33 +241,47 @@ Record the **hardware and Python version** alongside these values. A time budget
 
 ## Implementation Approach
 
-### Framework: OpenSpiel (primary choice)
+### Framework: none - our own implementation, Python standard library only *[DECIDED]*
 
-> **TODO:** Confirm via a short hands-on trial (implement one game, e.g. Ultimate Tic-Tac-Toe) before committing. If too heavy, use fallback below.
+Frameworks were surveyed against the actual requirements rather than their advertised features. **None clears the bar**, and one structural argument decides it.
 
-OpenSpiel (Google DeepMind) provides:
-- Tested Alpha-Beta (minimax) and MCTS/UCT implementations
-- Standard game API (Game/State interface) that custom games implement
-- Verified against known values and paper results - mitigates implementation-quality bias
-- MCTS evaluator is swappable (plug in heuristic rollout without forking core code)
-- Custom games implemented purely in Python by subclassing their API
+**The instrumentation is the research.** This project's contribution is not "Alpha-Beta vs MCTS" - that comparison exists in the literature. It is the **move-type tagging** (`normal` / `time-limited` / `memory-limited`) and the resource-bounded degradation analysis built on it. Every framework surveyed treats search as a closed call that returns a move, so tagging, the clock check and the memory cap all have to be bolted on from *outside* the search loop - which is exactly where they need to live. Writing our own puts the object of study at the centre of the design.
 
-OpenSpiel does **not** provide: time/memory budget stopping mechanism, move-type tagging. These are a thin wrapper we write around the standard search calls.
+**Survey results:**
 
-OpenSpiel's recommended workflow for custom games is to start from a structurally similar existing game in their repo and verify correctness via random-playthrough simulation tests (run random games and check that state transitions, legal-move lists, and terminal conditions never raise errors or produce illegal states). This doubles as an early bug-catcher for our game logic before any agent touches it.
+| Option | What it actually provides | Why not |
+|---|---|---|
+| **OpenSpiel** | `MCTSBot` with UCT, swappable evaluator, MCTS-Solver | `alpha_beta_search` has **no** iterative deepening, **no** transposition table, **no** move ordering, **no** time limit - zero of our four enhancements. `MCTSBot` takes `max_simulations` only, so anytime behaviour means forking `mcts_search`. Needs Python 3.11+ (wheels are cp311/312/313); we have 3.8.10. Games must become `pyspiel.Game` subclasses with integer action IDs. **None of our three games ship with it**, so the "verified implementations" benefit does not apply to us. |
+| **easyAI** | Negamax + alpha-beta + transposition tables + `id_solve`; a light `TwoPlayersGame` API | The closest call. Gives three of four AB enhancements, and move ordering comes free by ordering the returned move list. But **no MCTS at all**, no time budget, no node counting, no memory cap, and `id_solve` solves from the root rather than acting as an anytime move-chooser. Net effect is a wash: ~1 day saved on Alpha-Beta, paid back conforming three games and instrumenting from outside. |
+| **Ludii** | 1000+ games, built-in UCT and alpha-beta, GGP competition framework | **Java**, and games are written in a `.lud` ludeme DSL. Learning cost is far beyond the schedule. *Keep in mind as a rule cross-check* if an implementation is ever in doubt. |
+| **PettingZoo** | Multi-agent RL environment API | RL-oriented, no search agents, none of our games. Pure overhead. |
 
-### Fallback: easyAI + reference MCTS
-If OpenSpiel setup is too heavy:
-- `easyAI` for Negamax/alpha-beta with iterative deepening and transposition tables
-- Small well-documented public MCTS reference implementation
-- Custom game-environment interface per game (simpler than OpenSpiel's full API)
+**Consequences of building our own:**
+- **Zero dependencies.** Standard library only, so it runs unchanged on WSL2, Multipass, macOS and AWS, on the Python already installed. A collaborator clones the repo and runs it.
+- **No framework overhead** inside an experiment whose independent variable is wall-clock time - framework call costs would otherwise be measured as if they were algorithmic.
+- **The cost we accept:** correctness of the search code rests on our own tests rather than on a framework's reputation. Mitigated by TDD, and by the validation check below.
+
+> **Highest-value validation.** Before the full tournament, measure Ataxx's branching factor per ply with the random agent and compare against Ribeiro and Figueiredo: ~20 at ply 1, peaking at **92** near ply 25, ~90 again near ply 52. Reproducing that double-humped curve is strong evidence the move generator is correct. A flat curve means a bug - caught before a night of compute is spent on it.
+
+### Execution Platform *[DECIDED]*
+
+Timed runs happen on **one fixed machine**: a Multipass Ubuntu VM on the Dell i7 (32 GB), given a **fixed CPU and memory allocation** so the environment is declarable and reportable. A fixed allocation is preferable to WSL2, which balloons memory and takes all cores by default.
+
+Report the CPU model, allocated vCPU and RAM, OS and Python version alongside every result - a time budget is meaningless without them.
+
+**Method requirements:**
+- **Interleave trials across matchups.** Never run all of one agent's games and then another's; any thermal drift or background load must hit every agent equally. This is the highest-value methodological detail in the run, and it is free.
+- Mains power, performance profile, background applications closed.
+- If parallelising, pin one worker per physical core and leave at least one core for the host.
+
+AWS (`c6i` or another **dedicated-CPU** family) is the fallback if the laptop proves too noisy or too slow. **Never a burstable `t3`/`t4g` instance** - CPU credit throttling would silently slow later matchups and corrupt precisely the quantity being measured.
 
 ### Division of Work
 
 | Component | Source |
 |---|---|
-| Core Alpha-Beta / Negamax search logic | Framework (OpenSpiel or easyAI) |
-| Core MCTS selection / expansion / backprop | Framework (OpenSpiel or reference) |
+| Core Alpha-Beta / Negamax search logic | **Ours** |
+| Core MCTS selection / expansion / backprop | **Ours** |
 | Isolation 5x5 game implementation | Ours |
 | Ataxx 7x7 game implementation | Ours |
 | Ultimate Tic-Tac-Toe game implementation | Ours |
@@ -292,13 +337,23 @@ search-agents-strategy-games/
 4. ~~**Terminal reward scale**~~ - `+1 / 0 / -1` in all three games, mapped to `[0, 1]` for MCTS.
 5. ~~**Ataxx complexity citation**~~ - the ~60/~100 figures are unsourced (a deleted Wikipedia section). Replaced by Ribeiro and Figueiredo (ENIAC 2018), archived in [`docs/references/`](docs/references/).
 
-**Still open**
+6. ~~**OpenSpiel vs fallback**~~ - **neither.** Own implementation, Python standard library only. Frameworks were surveyed against requirements; see Implementation Approach for the evidence and the deciding argument.
+7. ~~**Execution platform**~~ - fixed Multipass Ubuntu VM on the Dell i7 with a pinned CPU and memory allocation; AWS `c6i` as fallback. Trials interleaved across matchups.
+8. ~~**Experimental grid**~~ - fully parameterised; final values are an output of the calibration pilot. Fallback ladder documented in Experimental Design.
 
-6. **Calibrated time/memory budgets** - fill in after the pilot sweep. **Cannot be resolved a priori**; does not block the spec or implementation, only the tournament run.
-7. **Average branching factor + average game length** - deliberately deferred. To be measured by the random agent against the tested implementations, so that every published figure comes from verified code. Maxima are already derived above and need no simulation.
-8. **OpenSpiel vs fallback** - confirm after a hands-on trial with one game. **This is the next decision.**
-9. **Ultimate Tic-Tac-Toe state-space bound** - the adopted `2 x 10 x 3^81` is correct but loose; a materially tighter bound is reachable once the rules are in code. Revisit at implementation time.
-10. **Read the Ribeiro and Figueiredo paper in full** - it evaluates MCTS variants on Ataxx, so it is related work for the research question, not merely a source of branching-factor numbers. Figures cited so far come from its abstract and indexing metadata.
+**All four original open items are now closed.** The remainder are deferred by design, not blocked.
+
+**Deferred - waiting on measurement, does not block implementation**
+
+9. **Calibrated time/memory budgets** - an output of the pilot sweep. Cannot be resolved a priori; blocks only the tournament run.
+10. **Average branching factor + average game length** - to be measured by the random agent against the tested implementations, so that every published figure comes from verified code. Maxima are already derived and need no simulation.
+11. **Ultimate Tic-Tac-Toe state-space bound** - the adopted `2 x 10 x 3^81` is correct but loose; a tighter bound is reachable once the rules are in code. Revisit at implementation time.
+
+**Housekeeping**
+
+12. **Read Ribeiro and Figueiredo in full** - it evaluates MCTS variants on Ataxx, so it is related work for the research question, not merely a source of branching-factor numbers. Figures cited so far come from its abstract and indexing metadata. *(No PDF text extractor is installed; `apt-get install poppler-utils` provides `pdftotext`.)*
+13. **Python version** - target is **3.8.10**, the system Python in the dev environment. Avoid newer syntax: no `match` statements, no `X | Y` type unions, no `dict |` merge operator.
+14. **Video reference for Ultimate Tic-Tac-Toe gamebook** - a walkthrough link is present; Isolation and Ataxx also have theirs. Nothing outstanding unless a better source appears.
 
 ---
 
