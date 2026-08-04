@@ -14,11 +14,13 @@ How do exact tree search and sampling-based search compare in playing strength, 
 
 ## Games
 
-| Game | State-space (approx.) | Role |
-|---|---|---|
-| Isolation 5x5 | ~1.0 x 10^10 | Small domain |
-| Ataxx 7x7 | ~4.8 x 10^23 | Medium domain |
-| Ultimate Tic-Tac-Toe | ~8.9 x 10^38 | Large domain |
+| Game | State-space (approx.) | log10 | Role |
+|---|---|---|---|
+| Isolation 5x5 | ~1.0 x 10^10 | 10.0 | Small domain |
+| Ataxx 7x7 | ~4.8 x 10^23 | 23.7 | Medium domain |
+| Ultimate Tic-Tac-Toe | ~8.9 x 10^39 | 39.9 | Large domain |
+
+Isolation 5x5 is a **declared variant** of the 1972 original, not the published game. Full rulesets, sources and rejected alternatives for all three games are in [`docs/games/`](docs/games/).
 
 ---
 

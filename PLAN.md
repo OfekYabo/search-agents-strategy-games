@@ -7,7 +7,7 @@
 
 ## Research Question
 
-How do **exact tree search** (Alpha-Beta with enhancements) and **sampling-based search** (MCTS/UCT) compare in playing strength, efficiency, and degradation behavior across two-player strategy games whose state-space sizes span ~28 orders of magnitude, when both are constrained by the same realistic per-move **time and memory budget**?
+How do **exact tree search** (Alpha-Beta with enhancements) and **sampling-based search** (MCTS/UCT) compare in playing strength, efficiency, and degradation behavior across two-player strategy games whose state-space sizes span ~30 orders of magnitude, when both are constrained by the same realistic per-move **time and memory budget**?
 
 Benchmarked against a random baseline and a no-search heuristic baseline.
 
@@ -16,7 +16,7 @@ Benchmarked against a random baseline and a no-search heuristic baseline.
 ## Why This Comparison Is Non-Trivial
 
 - Explicitly avoids the course-flagged "weak project" pattern: this is **not** Minimax vs Alpha-Beta (two refinements of the same algorithm). The two compared agents come from genuinely different search paradigms.
-- Three games spanning ~28 orders of magnitude in state-space size lets us test whether the paradigm comparison **shifts with scale**, rather than asserting it from one data point.
+- Three games spanning ~30 orders of magnitude in state-space size lets us test whether the paradigm comparison **shifts with scale**, rather than asserting it from one data point.
 - Realistic time/memory constraints (not artificial fixed depth) give both paradigms a shared, fair resource model.
 - Move-type tagging produces **explanatory data** (why performance changes) not just outcome data (that it changes).
 
@@ -28,7 +28,7 @@ Benchmarked against a random baseline and a no-search heuristic baseline.
 |---|---|---|---|---|
 | Isolation 5x5 | 5x5 grid | 2 x 25 x 24 x 2^23 ~ 1.01 x 10^10 | 10.0 | Small domain |
 | Ataxx 7x7 | 7x7 grid | 2 x 3^49 ~ 4.78 x 10^23 | 23.7 | Medium domain |
-| Ultimate Tic-Tac-Toe | 9x(3x3) | 2 x 3^81 ~ 8.89 x 10^38 | 38.9 | Large domain |
+| Ultimate Tic-Tac-Toe | 9x(3x3) | 2 x 10 x 3^81 ~ 8.89 x 10^39 | 39.9 | Large domain |
 
 ### State-Space Derivations (verified)
 
@@ -38,39 +38,42 @@ Benchmarked against a random baseline and a no-search heuristic baseline.
 **Ataxx 7x7:** 49 cells, each in 3 states (empty / P1 / P2): `3^49 ~ 2.39 x 10^23`, times 2:  
 `2 x 3^49 ~ 4.78 x 10^23`
 
-**Ultimate Tic-Tac-Toe:** 81 cells (9 boards x 9), each in 3 states: `3^81 ~ 4.44 x 10^38`, times 2:  
-`2 x 3^81 ~ 8.89 x 10^38`
+**Ultimate Tic-Tac-Toe:** 81 cells (9 boards x 9), each in 3 states: `3^81 ~ 4.44 x 10^38`, times 2 for whose turn, times 10 for the **send constraint** (the player to move is sent to one of 9 local boards, or is unconstrained):  
+`2 x 10 x 3^81 ~ 8.89 x 10^39`
 
-All three are loose upper bounds (do not exclude unreachable states).
+> The send constraint is genuine state, not derivable from the cell contents: two positions with identical cells but different send constraints have different legal moves. The earlier `2 x 3^81` figure omitted it. See [`docs/games/ultimate-tic-tac-toe.md`](docs/games/ultimate-tic-tac-toe.md) section 5.1, which also records that a materially tighter bound is reachable once the rules are in code - **to be revisited at implementation time.**
+
+All three are loose upper bounds (do not exclude unreachable states). A tighter published figure for Ataxx alone is `5.98 x 10^22`, about a quarter of our `3^49` term and consistent with it.
 
 ### Hardness Comparison Summary
 
-| Game | State-space (approx.) | log10 | Branching factor (avg) | Avg game length (plies) |
-|---|---|---|---|---|
-| Isolation 5x5 | 1.01 x 10^10 | 10.0 | TODO - pending movement rule confirmation | TODO - pending simulation |
-| Ataxx 7x7 | 4.78 x 10^23 | 23.7 | TODO - pending simulation (reference: ~60 for canonical Ataxx) | TODO - pending simulation (reference: ~100 for canonical Ataxx) |
-| Ultimate Tic-Tac-Toe | 8.89 x 10^38 | 38.9 | TODO - pending simulation (common case bounded by 9) | TODO - pending simulation |
+Maxima below are **derived from the rules** and need no simulation. Averages are deliberately deferred: they will be measured by the random agent against the tested implementations, so that every published figure comes from code that has been verified.
+
+| Game | State-space | log10 | Max branching | Avg branching | Max length | Avg length |
+|---|---|---|---|---|---|---|
+| Isolation 5x5 | 1.01 x 10^10 | 10.0 | **16** (12 at ply 1) | pending | **23** plies | pending |
+| Ataxx 7x7 | 4.78 x 10^23 | 23.7 | **<= 17e** (`<= 765`) | pending (ref. ~60) | **300** plies, enforced | pending (ref. ~100) |
+| Ultimate Tic-Tac-Toe | 8.89 x 10^39 | 39.9 | **81** at ply 1, then <= 9 forced / up to ~70 free | pending | **81** plies | pending |
+
+**Branching factor is not monotonic in state-space size.** Ataxx is by far the widest (~60) while Ultimate Tic-Tac-Toe, whose state space is sixteen orders of magnitude larger, is usually bounded by 9. UTTT gets its size from *depth* - up to 81 plies - not width. Any claim in the report about one game being "harder" must say which axis it means, because the two orderings genuinely disagree.
 
 ### Branching Factor
 
 Not a fixed constant - changes through the game. **Measure empirically** via random self-play simulation (batch of N=1000 games per game type, record legal-move count distribution at every ply). This is a natural byproduct of building the random agent.
 
-External reference for Ataxx: canonical Ataxx (7x7 with two fixed blocked squares) has average branching factor ~60 and average game length ~100 plies.
+**External reference for Ataxx** - Ribeiro and Figueiredo (ENIAC 2018) report *measured* branching factors on 7x7 Ataxx: ~20 at the first ply, peaking at **92** around ply 25, and ~90 again around ply 52. The curve is double-humped, which makes it a far better validation target than any single average: if our measurement comes out flat, the move generator is wrong. Paper archived at [`docs/references/`](docs/references/).
 
-> **TODO:** Finalize Isolation 5x5 movement rule - options are:
-> - King-step (one cell in any of 8 directions): branching factor bounded by 8 throughout, shrinks as cells become blocked
-> - Queen-slide (any number of cells in a straight line, blocked by occupied/blocked cells): theoretical max from board center on first move = 4 orthogonal directions x 2 reachable cells + 4 diagonal directions x 2 reachable cells = 16
->
-> This affects branching factor calculation only, not the state-space formula.
-> Fill in branching factor and average game length for all three games after running pilot simulations.
+> The widely-repeated "average branching factor ~60, average game length ~100 plies" figures come from a complexity section of the Wikipedia article on Ataxx **that no longer exists**, surviving only in mirrors of an old revision. They are **not peer-reviewed** and carry no primary citation, and the attribution of them to a board "with two fixed blocked squares" is unsupported - the source describes a standard unobstructed 7x7 board. Cite them as an unsourced estimate or not at all. See [`docs/games/ataxx.md`](docs/games/ataxx.md) section 9.2.
 
 ### Game Descriptions
 
-**Isolation 5x5:** Two players each control one piece on a 5x5 grid. On each turn a player moves their piece to a legal cell, and the cell they just left becomes permanently blocked. A player with no legal move loses.
+> **Full, implementable rulesets live in [`docs/games/`](docs/games/)** - one gamebook per game, each with the formal rules, starting position, derived complexity, sourced references, and the alternative rulesets we considered and rejected. Shared cross-game conventions are in [`docs/games/README.md`](docs/games/README.md). The summaries below are orientation only; the gamebooks are authoritative.
 
-**Ataxx 7x7:** On a 7x7 grid, a player can either clone their piece to an adjacent empty cell (the original stays), or jump two cells away to an empty cell (the original is removed). After moving, all opponent pieces adjacent to the destination are converted to the current player's color. A player with no pieces or no legal move loses.
+**Isolation 5x5** ([gamebook](docs/games/isolation.md)) - a **declared variant**, not the published 1972 game. Two players each control one pawn on a 5x5 grid, starting at `(0,2)` and `(4,2)`. On your turn you slide your pawn any distance along one of 8 directions (**queen-slide**), stopping before the board edge, a blocked cell, or the opponent's pawn. The cell you left then becomes permanently blocked - **uniformly, with no exempt cells**. A player with no legal move loses. Draws are impossible.
 
-**Ultimate Tic-Tac-Toe:** Nine 3x3 boards arranged in a 3x3 super-grid. Playing in cell (r, c) of any small board forces the opponent to play next in the small board at super-position (r, c). Winning three small boards in a row on the super-grid wins the game. When sent to a finished board, the player may move anywhere.
+**Ataxx 7x7** ([gamebook](docs/games/ataxx.md)) - on a 7x7 grid with pieces starting at opposite corners, a player either **clones** into an empty cell at Chebyshev distance 1 (the original stays) or **jumps** a piece to an empty cell at Chebyshev distance exactly 2 (the original is removed). All opponent pieces adjacent to the destination are then converted. **A player with no legal move passes; they do not lose.** A player is eliminated only by reaching zero pieces. The game ends when the board fills, a player is eliminated, 30 plies pass without progress, or a 300-ply cap is reached; most pieces wins.
+
+**Ultimate Tic-Tac-Toe** ([gamebook](docs/games/ultimate-tic-tac-toe.md)) - nine 3x3 boards in a 3x3 super-grid. Playing cell `c` of any local board sends the opponent to local board `c`. Three local boards won in a row wins the game. A local board that is won or drawn is **closed to further play**, and being sent to one frees the opponent to play in any undecided board. A drawn local board counts for neither player.
 
 ---
 
@@ -95,10 +98,17 @@ Evaluates each legal move with a domain-specific function, picks best-scoring wi
 
 **This same evaluation function is used by Alpha-Beta at its search horizon**, so performance differences between Heuristic and Alpha-Beta are attributable to search depth, not to different evaluation functions.
 
-Starter evaluation functions (to be tuned during development):
-- **Isolation:** own legal-move count minus opponent legal-move count (mobility difference)
-- **Ataxx:** piece-count difference + number of opponent pieces immediately convertible by the candidate move + positional stability term
+Starter evaluation functions (to be tuned during development). All are scored **from the perspective of the player to move**, never from a fixed player's - an evaluation written from Player 1's fixed perspective silently inverts on every other ply.
+
+- **Isolation:** own legal-move count minus opponent legal-move count (mobility difference). Well matched to the queen-slide variant, whose mobility varies far more sharply between positions than king-step mobility would.
+- **Ataxx:** piece-count difference + number of opponent pieces immediately convertible by the candidate move + **exposure** term (see below).
 - **Ultimate Tic-Tac-Toe:** small boards won (weighted) + in-board threats (two-in-a-row with third cell open) - blocked opponent threats + bonus for center/corner boards
+
+> **Defining "positional stability" for Ataxx.** The Othello intuition does not transfer: **in Ataxx no piece is ever permanently safe**, because any piece can be converted by an opponent landing adjacent to it. The usable notion is **exposure** - a piece is vulnerable exactly when it has at least one empty neighbouring cell - so the term counts empty neighbours, negated. Corners have 3 neighbours and edges 5, against 8 for a central cell, which is why corners are structurally safer here. Same conclusion as Othello, entirely different reason.
+
+#### Shared reward scale
+
+**Every game returns `+1` win / `0` draw / `-1` loss, from the perspective of the player to move**, identically across all three games so that agent behaviour stays comparable between domains. Alpha-Beta consumes this directly (negamax flips with `-v`). **MCTS converts to `[0, 1]` via `(v + 1) / 2`** in one place before backpropagation, because UCB1's exploration term does not rescale with the reward and every published exploration constant assumes rewards in `[0, 1]`. Full rationale in [`docs/games/README.md`](docs/games/README.md).
 
 #### Enhanced Alpha-Beta
 - Minimax with alpha-beta pruning
@@ -149,7 +159,7 @@ Tagging is implemented as a **shared decision wrapper** (timer + memory check + 
 
 ## Parameter Calibration (Pilot Phase)
 
-> **TODO:** Run this pilot before the main tournament. Fill in final chosen values below.
+> **Deferred by design - does not block the spec or the implementation.** These values are *outputs* of the pilot, not inputs to it: they cannot be chosen a priori, because the right budget is defined relative to how the agents actually degrade on this hardware. The pilot must run after the games and agents exist and before the main tournament. Everything upstream of the tournament runner can be specified, built and tested with the budget left as a parameter.
 
 Budgets cannot be chosen a priori. Procedure per game:
 
@@ -161,9 +171,11 @@ Budgets cannot be chosen a priori. Procedure per game:
 
 | Game | Easy | Main (balanced) | Hard |
 |---|---|---|---|
-| Isolation 5x5 | TODO | TODO | TODO |
-| Ataxx 7x7 | TODO | TODO | TODO |
-| Ultimate Tic-Tac-Toe | TODO | TODO | TODO |
+| Isolation 5x5 | *pilot output* | *pilot output* | *pilot output* |
+| Ataxx 7x7 | *pilot output* | *pilot output* | *pilot output* |
+| Ultimate Tic-Tac-Toe | *pilot output* | *pilot output* | *pilot output* |
+
+Record the **hardware and Python version** alongside these values. A time budget is only meaningful relative to the machine that produced it, and the report needs that for reproducibility.
 
 ---
 
@@ -248,12 +260,12 @@ search-agents-strategy-games/
   - base_agent.py          # shared interface + decision wrapper (tagging, timing, memory cap)
 - games/
   - isolation.py
-  - attax.py
+  - ataxx.py
   - ultimate_ttt.py
   - base_game.py           # shared game interface
 - evaluation/
   - isolation_eval.py
-  - attax_eval.py
+  - ataxx_eval.py
   - uttt_eval.py
 - experiments/
   - calibrate.py           # pilot sweep per game
@@ -272,10 +284,21 @@ search-agents-strategy-games/
 
 ## Open Items Summary
 
-1. **Isolation movement rule** - king-step vs queen-slide vs other. Needed to finalize rules description and branching factor.
-2. **Calibrated time/memory budgets** - fill in after pilot sweep (see Section 5).
-3. **Branching factor + average game length** - fill in after running random self-play simulations.
-4. **OpenSpiel vs fallback** - confirm after hands-on trial with one game.
+**Resolved**
+
+1. ~~**Isolation movement rule**~~ - **queen-slide** on 5x5, vacated cell auto-blocks uniformly with no exempt cells, pawns start `(0,2)` and `(4,2)`. Max branching 16 (12 at ply 1), max 23 plies, no draws possible. See [gamebook](docs/games/isolation.md).
+2. ~~**Ataxx rules**~~ - a player with no legal move **passes**, it does not lose (the original wording here was wrong). Termination is guaranteed by a 30-ply no-progress rule with a 300-ply hard cap, because the published rules do not terminate: jump moves leave the occupied-cell count unchanged, so jump-only play can run forever.
+3. ~~**Ultimate Tic-Tac-Toe rules**~~ - a local board that is won or drawn is **closed** to further play; a drawn local board counts for neither player.
+4. ~~**Terminal reward scale**~~ - `+1 / 0 / -1` in all three games, mapped to `[0, 1]` for MCTS.
+5. ~~**Ataxx complexity citation**~~ - the ~60/~100 figures are unsourced (a deleted Wikipedia section). Replaced by Ribeiro and Figueiredo (ENIAC 2018), archived in [`docs/references/`](docs/references/).
+
+**Still open**
+
+6. **Calibrated time/memory budgets** - fill in after the pilot sweep. **Cannot be resolved a priori**; does not block the spec or implementation, only the tournament run.
+7. **Average branching factor + average game length** - deliberately deferred. To be measured by the random agent against the tested implementations, so that every published figure comes from verified code. Maxima are already derived above and need no simulation.
+8. **OpenSpiel vs fallback** - confirm after a hands-on trial with one game. **This is the next decision.**
+9. **Ultimate Tic-Tac-Toe state-space bound** - the adopted `2 x 10 x 3^81` is correct but loose; a materially tighter bound is reachable once the rules are in code. Revisit at implementation time.
+10. **Read the Ribeiro and Figueiredo paper in full** - it evaluates MCTS variants on Ataxx, so it is related work for the research question, not merely a source of branching-factor numbers. Figures cited so far come from its abstract and indexing metadata.
 
 ---
 
@@ -284,5 +307,7 @@ search-agents-strategy-games/
 - Russell, S. and Norvig, P. *Artificial Intelligence: A Modern Approach.* 2020 (chapters 3-5).
 - Korf, R. E. *Heuristic Search.* 2009.
 - Edelkamp, S. *Heuristic Search: Theory and Applications.*
-- Ataxx complexity: average branching factor ~60, average game length ~100 plies (canonical 7x7 board).
+- Ribeiro, L. and Figueiredo, D. R. *Performance of Monte Carlo Tree Search Algorithms when Playing the Game Ataxx.* ENIAC 2018, Sao Paulo. DOI [10.5753/eniac.2018.4423](https://doi.org/10.5753/eniac.2018.4423). Measured Ataxx branching factors, and related work on MCTS for this exact game. Archived in [`docs/references/`](docs/references/).
+- Ataxx complexity, unsourced: average branching factor ~60, average game length ~100 plies (standard 7x7 board). From a deleted section of the Wikipedia article - **not peer-reviewed**, see [`docs/games/ataxx.md`](docs/games/ataxx.md) section 9.2.
+- Per-game rulesets, sources and rejected alternatives: [`docs/games/`](docs/games/).
 - Course syllabus and project guidelines, Search Methods in Artificial Intelligence (237-2-5513), Ben-Gurion University of the Negev.
