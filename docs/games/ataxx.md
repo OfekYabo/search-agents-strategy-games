@@ -235,14 +235,28 @@ source can carry.
 | Ply 1, measured | **~20** | Ribeiro and Figueiredo 2018 |
 | Peak, measured | **92** around ply 25; **~90** again around ply 52 | Ribeiro and Figueiredo 2018 |
 | Typical average | **~60** | old Wikipedia revision - **not peer-reviewed**, see 9.2 |
-| Our average | *pending* | to be measured by the random agent against the tested implementation |
+| Our average | **50.9**, peak **76.3** at ply 62 | measured, 200 random games |
 
-The measured figures from Ribeiro and Figueiredo are the better reference: they are
-peer-reviewed, and their shape is informative in its own right. Branching factor is
-**not monotonic** - it starts near 20, roughly quadruples to a mid-game peak of 92,
-falls, and peaks again near ply 52. Our own measurement should reproduce that
-double-humped curve; if it comes out flat, the move generator is wrong. This makes
-them a far better validation target than a single average.
+**Our measurement, and how it compares.** Random self-play over 200 games gives
+ply-1 branching of exactly **16** (derivable by hand - see below), a peak of **76.3
+at ply 62**, and a mean game length of **182.6 plies**.
+
+That does not match the reference and is not expected to, for two understood reasons:
+their figures are not for uniformly random play, and our board has **49 playable
+cells against their 47** because we use no blocked squares. What agrees is the
+**shape** - a rise to roughly **4.6x** the opening width followed by a decline, with
+the peak at a similar *relative* point in the game (ply 62 of 183 is 34%; ply 25 of
+100 is 25%). Our curve is a single broad plateau rather than the two distinct peaks
+the reference describes; an earlier draft of this document asserted the double hump
+as something we should reproduce, which was over-reading a secondary source.
+
+**The sharpest correctness check needs no reference at all.** Ply-1 branching must be
+exactly 16: from each of two corners, 3 adjacent empty cells and 5 on-board cells at
+distance 2, with clones deduplicating by destination, giving `6 + 10`. Two of a
+corner's five jump cells are knight-shaped, so a generator enumerating only straight
+and diagonal two-steps yields **12**. That single equality catches the classic bug for
+this game, and it is asserted in `tests/test_branching_validation.py` - verified by
+injecting the bug and confirming the gate fails.
 
 The bound follows cleanly from move identity (4.2): **every legal move lands on an
 empty cell**, and a given empty cell can be the destination of *at most one*

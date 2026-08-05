@@ -47,13 +47,13 @@ All three are loose upper bounds (do not exclude unreachable states). A tighter 
 
 ### Hardness Comparison Summary
 
-Maxima below are **derived from the rules** and need no simulation. Averages are deliberately deferred: they will be measured by the random agent against the tested implementations, so that every published figure comes from code that has been verified.
+Maxima are **derived from the rules**. Averages are **measured** by random self-play against the tested implementations (`python3 -m experiments.measure_branching`), so every figure here comes from verified code rather than estimation. Sample sizes: 500 games for Isolation, 300 for Ultimate Tic-Tac-Toe, 200 for Ataxx.
 
 | Game | State-space | log10 | Max branching | Avg branching | Max length | Avg length |
 |---|---|---|---|---|---|---|
-| Isolation 5x5 | 1.01 x 10^10 | 10.0 | **16** (11 at ply 1) | pending | **23** plies | pending |
-| Ataxx 7x7 | 4.78 x 10^23 | 23.7 | **<= 17e** (`<= 765`) | pending (ref. ~60) | **300** plies, enforced | pending (ref. ~100) |
-| Ultimate Tic-Tac-Toe | 8.89 x 10^39 | 39.9 | **81** at ply 1, then <= 9 forced / up to ~70 free | pending | **81** plies | pending |
+| Isolation 5x5 | 1.01 x 10^10 | 10.0 | **16** (11 at ply 1) | **6.3** | **23** plies | **15.9** |
+| Ataxx 7x7 | 4.78 x 10^23 | 23.7 | **<= 17e** (`<= 765`) | **50.9** (peak 76.3 at ply 62) | **300** plies, enforced | **182.6** |
+| Ultimate Tic-Tac-Toe | 8.89 x 10^39 | 39.9 | **81** at ply 1, then <= 9 forced / up to ~70 free | **9.1** | **81** plies | **59.5** |
 
 **Branching factor is not monotonic in state-space size.** Ataxx is by far the widest (~60) while Ultimate Tic-Tac-Toe, whose state space is sixteen orders of magnitude larger, is usually bounded by 9. UTTT gets its size from *depth* - up to 81 plies - not width. Any claim in the report about one game being "harder" must say which axis it means, because the two orderings genuinely disagree.
 
@@ -346,7 +346,7 @@ search-agents-strategy-games/
 **Deferred - waiting on measurement, does not block implementation**
 
 9. **Calibrated time/memory budgets** - an output of the pilot sweep. Cannot be resolved a priori; blocks only the tournament run.
-10. **Average branching factor + average game length** - to be measured by the random agent against the tested implementations, so that every published figure comes from verified code. Maxima are already derived and need no simulation.
+10. ~~**Average branching factor + average game length**~~ - **measured** and recorded in the hardness table above. Ataxx does not match the published ~60/~100 and is not expected to: that reference is not of uniformly random play, and our board has 49 playable cells against its 47. The *shape* agrees - a rise to about 4.6x the opening width, then a decline, with the peak in the same relative position.
 11. **Ultimate Tic-Tac-Toe state-space bound** - the adopted `2 x 10 x 3^81` is correct but loose; a tighter bound is reachable once the rules are in code. Revisit at implementation time.
 
 **Housekeeping**

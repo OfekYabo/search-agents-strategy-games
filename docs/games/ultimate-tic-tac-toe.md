@@ -178,7 +178,7 @@ care:
 | Ply 1 | **81** |
 | Sent to an undecided board (the usual case) | **<= 9**, and falls as that board fills |
 | Free choice (sent to a decided board) | **all empty cells in all undecided boards** - up to ~70 early on |
-| Average over a game | *pending* - to be measured by the random agent |
+| Average over a game | **9.1** - measured, 300 random games |
 
 The free-choice case cannot arise before ply 5, since a local board needs at least
 three of one player's marks to be won. It becomes common in the middle game, and it
