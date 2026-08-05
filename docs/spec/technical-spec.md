@@ -234,6 +234,27 @@ class SearchContext:
 `should_stop()` polls the clock only every `check_every` invocations, per PLAN.md's
 "check every ~500-1000 nodes" requirement, so timing overhead stays negligible.
 
+**The polling interval is not agent-neutral, and getting this wrong silently deletes a
+tag.** The default of 512 is sized for agents that expand thousands of nodes per
+decision. A **one-ply agent calls `should_stop()` once per candidate move** - at most
+16 in Isolation, about 92 at Ataxx's peak branching factor - so the counter never
+reaches 512, **the clock is never read at all**, and the agent reports `normal` even
+against a budget that expired before it was invoked. Its `time-limited` tag becomes
+unreachable by construction while still appearing in the taxonomy.
+
+Shallow agents therefore call `ctx.set_check_every(1)` before searching. The cost is a
+few dozen clock reads per decision - microseconds against budgets of 50ms and up.
+
+> **Expected result, to be stated in the report rather than discovered in a table.**
+> With the check made genuine, the Heuristic agent is still expected to be tagged
+> `normal` essentially always: evaluating at most ~92 positions takes tens of
+> microseconds against a minimum budget three orders of magnitude larger. The
+> difference is that this now becomes a **measured property** - "the one-ply baseline
+> always completes within budget" - rather than an artifact of a polling constant. The
+> distinction matters because the same table reports MCTS as essentially never
+> `normal`, and a reader is entitled to know which of those two facts is about the
+> algorithm and which is about the instrument.
+
 ### 4.2b Memory caps must be calibrated, not guessed **[GAP - now specified]**
 
 PLAN.md requires a memory cap and a `memory-limited` tag but **never says how large the
