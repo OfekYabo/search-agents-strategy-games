@@ -31,7 +31,7 @@ The reusable validator every game's tests will call. Built first so no game is e
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: `games.base.WIN`, `games.base.DRAW`, `games.base.LOSS` (floats `1.0`, `0.0`, `-1.0`); `games.base.ConformanceError(Exception)`; `games.base.check_conformance(game, rng, n_games=200, max_plies=1000) -> None` which raises `ConformanceError` on any violation. `game` is any module exposing `initial_state`, `legal_moves`, `apply_move`, `is_terminal`, `result`, `end_reason`, `move_to_str`, `str_to_move`.
+- Produces: `games.base.WIN`, `games.base.DRAW`, `games.base.LOSS` (floats `1.0`, `0.0`, `-1.0`); `games.base.ConformanceError(AssertionError)`; `games.base.check_conformance(game, rng, n_games=200, max_plies=1000, side_of=None) -> None` which raises `ConformanceError` on any violation. `game` is any module exposing `initial_state`, `legal_moves`, `apply_move`, `is_terminal`, `result`, `end_reason`, `move_to_str`, `str_to_move`. `side_of` defaults to reading `state.side_to_move`; override it for states that are not dataclasses (the toy game in the tests uses a tuple).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -138,6 +138,27 @@ class ConformanceTest(unittest.TestCase):
             check_conformance(Endless, random.Random(1), n_games=1,
                               max_plies=50, side_of=_side_of)
 
+    def test_detects_non_string_end_reason(self):
+        class Broken(_ToyGame):
+            @staticmethod
+            def end_reason(s):
+                return 42
+
+        with self.assertRaises(ConformanceError):
+            check_conformance(Broken, random.Random(1), n_games=20, side_of=_side_of)
+
+    def test_detects_apply_move_rejecting_a_legal_move(self):
+        # The bug class this harness exists to catch: a move generator and a
+        # move applier that disagree. The raw exception must be converted, or
+        # later game tests see a confusing error instead of a diagnostic.
+        class Broken(_ToyGame):
+            @staticmethod
+            def apply_move(s, m):
+                raise KeyError("bad move")
+
+        with self.assertRaises(ConformanceError):
+            check_conformance(Broken, random.Random(1), n_games=20, side_of=_side_of)
+
 
 if __name__ == "__main__":
     unittest.main()
@@ -168,7 +189,7 @@ A "game" is a module (or any namespace) exposing pure functions:
 
 Rules for each game are specified in docs/games/, which is authoritative.
 """
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 WIN = 1.0
 DRAW = 0.0
@@ -236,7 +257,18 @@ def check_conformance(game, rng, n_games=200, max_plies=1000, side_of=None):
                 )
 
             before = side_of(state)
-            state = game.apply_move(state, move)
+            try:
+                state = game.apply_move(state, move)
+            except ConformanceError:
+                raise
+            except Exception as exc:
+                # A move generator and a move applier that disagree is exactly
+                # the bug class this harness exists to catch, so it must surface
+                # as a diagnostic rather than as the game's raw exception.
+                raise ConformanceError(
+                    "game %d ply %d: apply_move(%r) raised %s: %s"
+                    % (game_index, ply, move, type(exc).__name__, exc)
+                )
             if side_of(state) == before:
                 raise ConformanceError(
                     "game %d ply %d: apply_move did not flip side_to_move"
@@ -252,7 +284,7 @@ def check_conformance(game, rng, n_games=200, max_plies=1000, side_of=None):
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `python -m unittest tests.test_games_base -v`
-Expected: PASS, 6 tests
+Expected: PASS, 8 tests
 
 - [ ] **Step 5: Commit**
 
@@ -1510,7 +1542,7 @@ Expected: PASS, 12 tests
 - [ ] **Step 5: Run the whole suite**
 
 Run: `python -m unittest discover -s tests -v`
-Expected: PASS, 52 tests across five modules (6 + 12 + 13 + 9 + 12)
+Expected: PASS, 54 tests across five modules (8 + 12 + 13 + 9 + 12)
 
 - [ ] **Step 6: Commit**
 
