@@ -9,6 +9,7 @@ from agents import random_agent
 from experiments import runner
 from experiments.logger import GameLogger
 from games import isolation
+from games.base import DRAW, LOSS, WIN
 
 CONFIG = {"name": "test", "time_budget_s": 1.0, "max_nodes": 1000}
 
@@ -80,6 +81,71 @@ class PlayGameTest(unittest.TestCase):
         )
         self.assertEqual(record.plies, 4)
         self.assertEqual(record.end_reason, "ply_cap")
+
+
+class _StubResultGame(object):
+    """A game double whose result() is fixed, so _winner()'s mapping from
+    "the side to move's outcome" onto "first"/"second" can be exercised for
+    every case directly, without needing a real terminal position for each
+    one."""
+
+    def __init__(self, outcome):
+        self._outcome = outcome
+
+    def result(self, state):
+        return self._outcome
+
+
+class _StubState(object):
+    def __init__(self, side_to_move):
+        self.side_to_move = side_to_move
+
+
+class WinnerMappingTest(unittest.TestCase):
+    """_winner() decides who won every game in the study. Every other test
+    touching .winner is satisfiable by an inverted (first/second-swapped)
+    mapping too - see PlayGameTest and LoggerTest, none of which would catch
+    the comparison being flipped. These tests call the module-private
+    _winner() directly and are deliberately exhaustive, because this mapping
+    is too consequential to leave to indirect coverage alone."""
+
+    def test_winner_mapping_is_exhaustively_correct(self):
+        cases = [
+            (WIN, 0, "first"),
+            (WIN, 1, "second"),
+            (LOSS, 0, "second"),
+            (LOSS, 1, "first"),
+            (DRAW, 0, "draw"),
+            (DRAW, 1, "draw"),
+        ]
+        for outcome, side_to_move, expected in cases:
+            with self.subTest(outcome=outcome, side_to_move=side_to_move):
+                game = _StubResultGame(outcome)
+                state = _StubState(side_to_move)
+                self.assertEqual(
+                    runner._winner(game, state, "no_moves"), expected)
+
+    def test_winner_agrees_with_replaying_the_logged_moves(self):
+        for seed in range(6):
+            record = runner.play_game(
+                isolation,
+                (random_agent.choose, random_agent.choose),
+                ("random_a", "random_b"),
+                CONFIG,
+                seed=seed,
+            )
+            # Independently rebuild the terminal position from the logged
+            # move strings alone, exercising the move_to_str/str_to_move
+            # round trip end to end, then derive the winner from Isolation's
+            # own rule (the side to move at a terminal state has no legal
+            # move and has therefore lost) rather than from _winner itself.
+            state = isolation.initial_state()
+            for move in record.moves:
+                state = isolation.apply_move(
+                    state, isolation.str_to_move(move.move))
+            self.assertTrue(isolation.is_terminal(state))
+            expected = "first" if state.side_to_move == 1 else "second"
+            self.assertEqual(record.winner, expected)
 
 
 class _FlakyLegalMovesGame(object):

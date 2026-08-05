@@ -15,7 +15,7 @@ class MoveRecord:
     side: int
     tag: str
     elapsed_s: float
-    nodes: int
+    nodes: Optional[int]
     simulations: Optional[int]
     depth: Optional[int]
     move: str
