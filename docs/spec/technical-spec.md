@@ -535,6 +535,32 @@ Every game's seed is derived deterministically:
 `seed = hash((game_name, agent_a, agent_b, config_name, trial_index))`. This makes any
 single game individually reproducible for debugging without re-running the tournament.
 
+> **What the seed does and does not guarantee. [IMPORTANT - state this in the report.]**
+> The seed makes every *random choice* reproducible: the random agent's picks, the
+> heuristic agent's tie-breaks, MCTS's expansion order and rollouts. It does **not**
+> make a wall-clock-budgeted search bit-reproducible, because how many nodes
+> Alpha-Beta expands or how many simulations MCTS runs depends on how fast the machine
+> happened to be for those milliseconds. Re-running the identical seed can therefore
+> produce a different game.
+>
+> Observed directly: Alpha-Beta versus the Heuristic agent over the same 20 seeds at a
+> 50ms budget scored 20/20 in one run and 18/20 in another. Both are the same code and
+> the same seeds.
+>
+> This is **intrinsic to the experimental design, not a defect** - it is the price of
+> using wall-clock time as the budget, which section 5 of PLAN.md argues is the only
+> fair unit across two different search paradigms. Two consequences to handle honestly:
+>
+> - **The CSV is one sample, not a replayable artifact.** A logged game can be
+>   *inspected* move by move, but replaying its seed need not reproduce it.
+> - **Trial counts must be large enough that this variance is absorbed**, and reported
+>   figures need confidence intervals rather than bare percentages. It is a further
+>   argument for the interleaving requirement in 7.4: run-to-run timing noise must hit
+>   every agent equally rather than accumulating against whichever ran last.
+>
+> Only the two baseline agents are genuinely bit-reproducible, since neither consults
+> the clock in a way that changes its choice.
+
 ### 7.3 `calibrate.py`
 
 Three phases, run in order. Each produces numbers the report can cite.
