@@ -77,8 +77,24 @@ class AlphaBetaTest(unittest.TestCase):
                 s = iso.apply_move(s, d.move)
             if s.side_to_move != ab_side:
                 wins += 1
-        self.assertGreater(wins, games // 2,
+        self.assertGreaterEqual(wins, 14,
                            "alpha-beta won %d/%d against one-ply" % (wins, games))
+
+    def test_the_returned_move_matches_a_search_limited_to_the_reported_depth(self):
+        s = iso.initial_state()
+        for budget in (0.01, 0.05, 0.2):
+            d = decide(self.agent, iso, s, budget, 10 ** 9, random.Random(1))
+            self.assertIsNotNone(d.depth)
+            reference = alpha_beta_agent.make(isolation_eval.evaluate,
+                                             max_depth=d.depth)
+            ctx = SearchContext(60.0, 10 ** 9)
+            expected = reference(iso, s, ctx, random.Random(1))
+            self.assertEqual(ctx.depth_reached, d.depth)
+            self.assertEqual(
+                d.move, expected,
+                "budget %s reported depth %s but returned a move that a clean "
+                "depth-%s search does not produce - a partial iteration leaked"
+                % (budget, d.depth, d.depth))
 
     def test_discards_an_incomplete_iteration(self):
         # A clock that expires partway through the first deepening still yields a

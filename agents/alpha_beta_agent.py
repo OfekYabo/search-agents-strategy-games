@@ -41,7 +41,7 @@ def make(evaluate, max_entries=200000, max_depth=64):
         for depth in itertools.count(1):
             try:
                 value, move = _root(game, state, depth, ctx, table,
-                                    evaluate, max_entries)
+                                    evaluate, max_entries, best_move)
             except _Timeout:
                 break                      # discard this iteration entirely
 
@@ -64,8 +64,19 @@ def make(evaluate, max_entries=200000, max_depth=64):
     return agent
 
 
-def _root(game, state, depth, ctx, table, evaluate, cap):
+def _root(game, state, depth, ctx, table, evaluate, cap, first=None):
+    """`first`, when given and still legal, is searched before anything else.
+
+    The root state is never itself written to the table (only positions
+    reached strictly inside the search are, since only those pass through
+    _negamax), so _ordered has nothing to key on at the root; without this
+    hint each new deepening iteration would re-derive the root's move order
+    from scratch instead of trying last iteration's best move first, which is
+    the single most valuable ordering signal iterative deepening produces.
+    """
     moves = _ordered(game, state, table)
+    if first is not None and first in moves and first != moves[0]:
+        moves = [first] + [m for m in moves if m != first]
     alpha, best_value, best_move = -_INF, -_INF, moves[0]
     for move in moves:
         child = game.apply_move(state, move)
