@@ -68,6 +68,8 @@ Games are **stateless modules of pure functions**, not objects. Every function t
 state and returns a value; nothing mutates.
 
 ```python
+NAME: str                                      # e.g. "isolation"; labels every CSV row
+
 def initial_state() -> S: ...
 def legal_moves(s: S) -> List[M]: ...          # deterministic order; [] iff terminal
 def apply_move(s: S, m: M) -> S: ...
@@ -77,6 +79,17 @@ def end_reason(s: S) -> str: ...               # for logging, e.g. "line", "no_p
 def move_to_str(m: M) -> str: ...
 def str_to_move(text: str) -> M: ...           # must round-trip
 ```
+
+**`NAME` is part of the contract, and each game's tests must assert its own value.**
+The runner derives both the `game` column and every `game_id` from it. Since Ataxx and
+UTTT will be written by following Isolation's module shape, a copied-and-unedited
+`NAME = "isolation"` would mislabel an entire game's worth of CSV rows as another
+game's, with nothing failing anywhere. `check_conformance` verifies it is a non-empty
+string; only a per-game test can verify it is the *right* string.
+
+**No game validates its own moves.** `apply_move` trusts its input, which is correct
+for a hot path called at every search node - but it means the *caller* is responsible
+for legality. See 7.1.
 
 **`legal_moves` returns `[]` if and only if the state is terminal.** Ataxx is the
 exception that proves the rule: a player with no move *passes*, so a pass is
@@ -275,9 +288,21 @@ cap is the one where `memory-limited` appears **as a meaningful minority** at th
 time budget - present enough to analyse, not so tight that it dominates and turns the
 experiment into a memory study.
 
-> Report the cap in *entries and nodes*, not bytes. Python object overhead makes a byte
-> figure both unstable and misleading, and the entry count is what actually bounds
-> behaviour.
+**The two caps are separate config keys, and equal counts are not equal memory.**
+`max_entries` (Alpha-Beta) and `max_nodes` (MCTS) must be **calibrated to comparable
+byte footprints**, not set to the same number. A transposition-table entry is a
+4-tuple of `(depth, value, flag, best_move)`; an MCTS tree node holds a full game
+state, a child mapping, a visit count and a value accumulator - plausibly five times
+the size or more.
+
+> **Why this is not a detail.** The research question promises "the same realistic
+> per-move **time and memory** budget". If the two agents are capped at equal object
+> *counts*, that promise is false and the memory axis of the comparison is
+> meaningless - while every table still looks perfectly normal. Pilot phase 2
+> therefore measures the actual per-object footprint of each structure (`sys.getsizeof`
+> over a populated sample, including the contained state) and sets the two caps so the
+> **byte budgets match**. Report both the byte budget and the resulting entry and node
+> counts, so a reader can see the conversion rather than trust it.
 
 ### 4.3 Tag precedence **[SIGN-OFF]**
 
@@ -315,6 +340,25 @@ therefore treat `move is None` as an aborted game rather than attempting to appl
 
 All four implement `choose_move(state, ctx) -> M`.
 
+### 5.0 Agent lifetime: one instance per game
+
+`SearchContext` is scoped to a single decision, so any structure that must outlive one
+move - Alpha-Beta's transposition table, MCTS's tree - lives in the agent object or
+closure instead. **The runner therefore constructs a fresh agent per game**, never
+reusing one across a matchup.
+
+> **Why this is a correctness requirement, not a style preference.** Reusing one
+> Alpha-Beta closure across the games of a matchup is a natural performance instinct,
+> and it would silently corrupt the memory measurement: a table already near its cap
+> from *earlier, unrelated games* would trigger `hit_memory_cap()` on an early move of
+> a later game, tagging that move `memory-limited` because of memory consumed by a game
+> that had already finished. The tag would be real and the attribution wrong, with
+> nothing to reveal it.
+
+State must not leak between games in any form. Two games with the same seed must
+produce identical move sequences regardless of what ran before them - which is testable
+and should be tested.
+
 ### 5.1 Random
 Uniform over `legal_moves`. Calls `ctx.completed()` immediately. Seeded per game.
 
@@ -348,6 +392,19 @@ returned move is always from the last fully completed depth.
   `(depth, value, flag, best_move)` with `flag in {EXACT, LOWER, UPPER}`. Capped at
   `max_entries`; on overflow, **replace-on-collision**. Reaching the cap calls
   `ctx.hit_memory_cap()`.
+- **Report the transposition-table hit rate per game.** This is a required metric, not
+  a diagnostic. Ataxx's state carries `plies_since_progress` (0..29), which is
+  load-bearing for the no-progress rule and therefore part of the key - a position one
+  ply from a no-progress draw genuinely is not the same position as one at counter 0.
+  That fragments Ataxx's table by up to 30x relative to the other two games. Since the
+  study compares Alpha-Beta *across* games, an unmeasured per-game difference in table
+  effectiveness would be attributed to the game's size rather than to its rules.
+  Measuring it converts a confound into a finding.
+
+  > This is distinct from the total ply count, which is deliberately **not** in state
+  > (see 7.1): that counter is unbounded and never resets, so it would make every
+  > position at every ply unique and destroy the table outright rather than fragmenting
+  > it. The bounded, frequently-resetting no-progress counter is a different case.
 - **Move ordering** - TT best move first, then the game's own `legal_moves` order.
 - `completed()` is called if an iteration proves a win/loss or exhausts the tree.
 
@@ -446,7 +503,31 @@ All return a float **strictly inside `(-1, +1)`**, from the perspective of
 ### 7.1 `runner.play_game(game, agent_a, agent_b, config, seed) -> GameRecord`
 
 Alternates agents, wraps each decision, appends a `MoveRecord`, stops at terminal.
-Fully deterministic given `seed`.
+Fully deterministic given `seed`. Constructs a **fresh agent per game** (5.0).
+
+**The runner validates every returned move against `legal_moves` before applying it.
+[CRITICAL]** `apply_move` deliberately performs no validation - it is called at every
+search node and cannot afford to - and `decide()` substitutes a random legal move only
+when the agent *raises*. Nothing else stands between a wrong move and the data.
+
+The failure this prevents is the worst kind available in this project. Alpha-Beta and
+MCTS are exactly the code that returns a **wrong-but-plausible** move under a real bug:
+a stale transposition-table hit from a different depth, an off-by-one in best-move
+bookkeeping, a tree node whose move list went stale after pruning. Applied unchecked,
+such a move produces a game that runs to a decisive conclusion, is tagged `normal`,
+renders fine through `move_to_str`, and yields a CSV row **indistinguishable from a
+correct game**. There is no crash and no failing test - the study simply reports wrong
+numbers.
+
+The check is free: `play_game` already computes `legal_moves` for the
+`legal_move_count` column, so it reuses that list rather than calling again. It runs
+**outside** the agent's timing so validation is never charged to the agent.
+
+On violation: record the move with the `error` tag, end the game with
+`end_reason = "illegal_move"`, and score it a **draw** - the same containment as
+`agent_error`, so one agent's bug costs one game rather than the run. **A nonzero
+`illegal_move` count in the results is a bug report, not a data point**, and must be
+investigated rather than averaged.
 
 ### 7.2 Seeding **[SIGN-OFF]**
 
