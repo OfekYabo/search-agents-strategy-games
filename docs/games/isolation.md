@@ -1,7 +1,8 @@
 # Gamebook: Isolation 5x5 (queen-slide, auto-block)
 
 > Role in this project: **small domain** (log10 state space ~ 10.0).
-> Status: ruleset **confirmed**. Average branching factor and average game length pending empirical measurement.
+> Status: ruleset **confirmed** and implemented. Measured average branching factor
+> **6.3**, measured average game length **15.9 plies**.
 
 ---
 
