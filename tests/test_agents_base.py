@@ -23,6 +23,24 @@ class _StubGame:
         return [10, 20, 30]
 
 
+class _FailingLegalMovesGame:
+    """legal_moves() itself raises, so the error fallback has nothing to fall
+    back to."""
+
+    @staticmethod
+    def legal_moves(s):
+        raise RuntimeError("legal_moves boom")
+
+
+class _EmptyLegalMovesGame:
+    """legal_moves() returns no moves, so rng.choice([]) would raise
+    IndexError inside the fallback."""
+
+    @staticmethod
+    def legal_moves(s):
+        return []
+
+
 class SearchContextTest(unittest.TestCase):
     def test_does_not_stop_before_budget_expires(self):
         clock = FakeClock()
@@ -60,6 +78,23 @@ class SearchContextTest(unittest.TestCase):
         ctx.completed()
         self.assertTrue(ctx.memory_capped)
         self.assertTrue(ctx.finished)
+
+    def test_should_stop_stays_true_once_tripped(self):
+        clock = FakeClock()
+        ctx = SearchContext(1.0, max_nodes=100, check_every=4, clock=clock)
+        clock.advance(99.0)
+        tripped = False
+        for _ in range(4):
+            if ctx.should_stop():
+                tripped = True
+                break
+        self.assertTrue(tripped)
+        # The latch must short-circuit for further calls rather than
+        # requiring another full check_every batch before observing the
+        # clock again.
+        self.assertTrue(ctx.should_stop())
+        self.assertTrue(ctx.should_stop())
+        self.assertTrue(ctx.should_stop())
 
 
 class DecideTest(unittest.TestCase):
@@ -124,6 +159,30 @@ class DecideTest(unittest.TestCase):
                      simulations=None, depth=None, error=None)
         with self.assertRaises(Exception):
             d.move = 2
+
+    def test_nodes_is_none_when_the_agent_expanded_none(self):
+        def agent(game, state, ctx, rng):
+            ctx.completed()
+            return 10
+
+        d = decide(agent, _StubGame, None, 1.0, 100, random.Random(0), clock=FakeClock())
+        self.assertIsNone(d.nodes)
+
+    def test_error_fallback_survives_a_failing_legal_moves(self):
+        def agent(game, state, ctx, rng):
+            raise ValueError("boom")
+
+        d = decide(agent, _FailingLegalMovesGame, None, 1.0, 100,
+                    random.Random(0), clock=FakeClock())
+        self.assertEqual(d.tag, MoveTag.ERROR)
+
+    def test_error_fallback_survives_empty_legal_moves(self):
+        def agent(game, state, ctx, rng):
+            raise ValueError("boom")
+
+        d = decide(agent, _EmptyLegalMovesGame, None, 1.0, 100,
+                    random.Random(0), clock=FakeClock())
+        self.assertEqual(d.tag, MoveTag.ERROR)
 
 
 if __name__ == "__main__":

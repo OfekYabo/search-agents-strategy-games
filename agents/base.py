@@ -28,7 +28,7 @@ class Decision:
     move: Any
     tag: MoveTag
     elapsed_s: float
-    nodes: int
+    nodes: Optional[int]
     simulations: Optional[int]
     depth: Optional[int]
     error: Optional[str]
@@ -39,7 +39,14 @@ class SearchContext:
 
     should_stop() polls the wall clock only once every `check_every` calls, so
     timing overhead stays negligible even when called at every node. PLAN.md
-    specifies checking every ~500-1000 nodes.
+    specifies checking every ~500-1000 nodes. It is time-only: it never
+    consults `max_nodes`. Enforcing the node cap, and calling
+    hit_memory_cap() when a memory-backed structure (transposition table,
+    tree node pool) fills, is the agent's responsibility.
+
+    depth_reached is a hook for iterative-deepening agents (Alpha-Beta) to
+    set to the deepest fully completed iteration; it stays None for agents
+    that never set it and is surfaced as Decision.depth.
     """
 
     def __init__(self, time_budget_s, max_nodes, check_every=512,
@@ -55,6 +62,7 @@ class SearchContext:
         self.simulations = 0
         self.memory_capped = False
         self.finished = False
+        self.depth_reached = None
 
     def should_stop(self):
         # type: () -> bool
@@ -107,13 +115,20 @@ def decide(agent, game, state, time_budget_s, max_nodes, rng,
     ctx = SearchContext(time_budget_s, max_nodes, check_every=check_every,
                         clock=clock)
     error = None
-    depth = None
+    move = None
     try:
         move = agent(game, state, ctx, rng)
     except Exception:
         error = traceback.format_exc(limit=3)
         # Fall back to a legal move so the game and the tournament continue.
-        move = rng.choice(game.legal_moves(state))
+        # This fallback must itself never escape decide(): a failing agent
+        # is allowed to cost one tagged move, never the tournament run.
+        try:
+            move = rng.choice(game.legal_moves(state))
+        except Exception:
+            move = None
+            error += "\n\nFallback to a legal move also failed:\n"
+            error += traceback.format_exc(limit=3)
 
     if error is not None:
         tag = MoveTag.ERROR
@@ -128,12 +143,14 @@ def decide(agent, game, state, time_budget_s, max_nodes, rng,
         move=move,
         tag=tag,
         elapsed_s=ctx.elapsed(),
-        nodes=ctx.nodes,
-        # Reported only by agents that actually run simulations, so the CSV
-        # column stays empty for Alpha-Beta rather than reading a misleading 0.
-        # Auto-detected rather than passed in by the caller: a flag would have
-        # to be threaded through play_game, and forgetting it would silently
-        # drop every MCTS simulation count.
+        # nodes and simulations are each reported only by agents that
+        # actually produce them (Alpha-Beta calls note_node(), MCTS calls
+        # note_simulation(), never both), so the CSV column for the other
+        # stays empty rather than reading a misleading 0. Auto-detected
+        # rather than passed in by the caller: a flag would have to be
+        # threaded through play_game, and forgetting it would silently drop
+        # every MCTS simulation count or every Alpha-Beta node count.
+        nodes=ctx.nodes if ctx.nodes else None,
         simulations=ctx.simulations if ctx.simulations else None,
         depth=getattr(ctx, "depth_reached", None),
         error=error,
