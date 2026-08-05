@@ -10,6 +10,9 @@ def cell(r, c):
 
 
 class IsolationRulesTest(unittest.TestCase):
+    def test_name_is_correct(self):
+        self.assertEqual(isolation.NAME, "isolation")
+
     def test_initial_position(self):
         s = isolation.initial_state()
         self.assertEqual(s.blocked, 0)

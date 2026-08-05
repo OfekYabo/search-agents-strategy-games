@@ -11,6 +11,10 @@ A "game" is a module (or any namespace) exposing pure functions:
     move_to_str(m: M) -> str
     str_to_move(text: str) -> M
 
+and one attribute:
+
+    NAME: str                           # labels every CSV row for this game
+
 Rules for each game are specified in docs/games/, which is authoritative.
 """
 from typing import Any, Callable, Optional
@@ -43,6 +47,14 @@ def check_conformance(game, rng, n_games=200, max_plies=1000, side_of=None):
     """
     if side_of is None:
         side_of = _default_side_of
+
+    # Only checks that NAME exists and is a non-empty string; only a
+    # per-game test can verify it is the *correct* string for this game.
+    name = getattr(game, "NAME", None)
+    if not isinstance(name, str) or not name:
+        raise ConformanceError(
+            "game.NAME must be a non-empty str, got %r" % (name,)
+        )
 
     for game_index in range(n_games):
         state = game.initial_state()

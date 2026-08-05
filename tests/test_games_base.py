@@ -7,6 +7,8 @@ from games.base import WIN, DRAW, LOSS, ConformanceError, check_conformance
 class _ToyGame:
     """Minimal conforming game: count from 0 to 4, mover at 4 loses."""
 
+    NAME = "toy"
+
     @staticmethod
     def initial_state():
         return (0, 0)  # (count, side_to_move)
@@ -101,6 +103,30 @@ class ConformanceTest(unittest.TestCase):
 
         with self.assertRaises(ConformanceError):
             check_conformance(Broken, random.Random(1), n_games=20, side_of=_side_of)
+
+    def test_detects_missing_or_empty_name(self):
+        class NoName(object):
+            """Delegates to _ToyGame's functions without inheriting its
+            class attributes, so NAME is genuinely absent rather than
+            merely overridden."""
+            initial_state = staticmethod(_ToyGame.initial_state)
+            legal_moves = staticmethod(_ToyGame.legal_moves)
+            apply_move = staticmethod(_ToyGame.apply_move)
+            is_terminal = staticmethod(_ToyGame.is_terminal)
+            result = staticmethod(_ToyGame.result)
+            end_reason = staticmethod(_ToyGame.end_reason)
+            move_to_str = staticmethod(_ToyGame.move_to_str)
+            str_to_move = staticmethod(_ToyGame.str_to_move)
+
+        self.assertFalse(hasattr(NoName, "NAME"))
+        with self.assertRaises(ConformanceError):
+            check_conformance(NoName, random.Random(1), n_games=20, side_of=_side_of)
+
+        class EmptyName(_ToyGame):
+            NAME = ""
+
+        with self.assertRaises(ConformanceError):
+            check_conformance(EmptyName, random.Random(1), n_games=20, side_of=_side_of)
 
     def test_detects_game_exceeding_ply_bound(self):
         class Endless(_ToyGame):

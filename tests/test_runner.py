@@ -177,6 +177,15 @@ def _raising_agent(game, state, ctx, rng):
     raise RuntimeError("agent blew up")
 
 
+def _illegal_move_agent(game, state, ctx, rng):
+    """Returns a deliberately illegal move, standing in for a real
+    Alpha-Beta/MCTS bug (stale transposition-table hit, off-by-one in
+    best-move bookkeeping) that returns a wrong-but-plausible move without
+    raising."""
+    legal = game.legal_moves(state)
+    return next(c for c in range(25) if c not in legal)
+
+
 class ErrorHandlingTest(unittest.TestCase):
     def test_agent_returning_no_move_ends_the_game_as_an_error(self):
         wrapped = _FlakyLegalMovesGame(isolation)
@@ -191,6 +200,18 @@ class ErrorHandlingTest(unittest.TestCase):
         self.assertEqual(record.winner, "draw")
         self.assertEqual(record.moves[-1].tag, "error")
         self.assertEqual(record.moves[-1].move, "--")
+
+    def test_illegal_move_ends_the_game_and_is_recorded(self):
+        record = runner.play_game(
+            isolation,
+            (_illegal_move_agent, random_agent.choose),
+            ("bad", "random_b"),
+            CONFIG,
+            seed=1,
+        )
+        self.assertEqual(record.end_reason, "illegal_move")
+        self.assertEqual(record.winner, "draw")
+        self.assertEqual(record.moves[-1].tag, "error")
 
 
 class LoggerTest(unittest.TestCase):

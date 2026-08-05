@@ -65,7 +65,7 @@ class GameLogger:
                 "side": move.side,
                 "tag": move.tag,
                 "elapsed_s": "%.6f" % move.elapsed_s,
-                "nodes": move.nodes,
+                "nodes": "" if move.nodes is None else move.nodes,
                 "simulations": "" if move.simulations is None else move.simulations,
                 "depth": "" if move.depth is None else move.depth,
                 "move": move.move,

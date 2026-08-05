@@ -4,7 +4,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Tuple
 
-from agents.base import decide
+from agents.base import MoveTag, decide
 from games.base import DRAW, LOSS, WIN
 
 
@@ -72,6 +72,18 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
     letting the exception escape. play_game must not call apply_move(None);
     it ends the game immediately, tagging it "agent_error" and scoring it a
     draw, since there is no principled way to say who would have won.
+
+    decide() only substitutes a random legal move when the agent *raises*;
+    it never checks that a returned move is actually legal. Random and
+    Heuristic draw straight from legal_moves() so they cannot trigger this,
+    but a search agent (Alpha-Beta, MCTS) could return a wrong-but-plausible
+    move from a real bug - a stale transposition-table hit, an off-by-one in
+    best-move bookkeeping - and apply_move() itself performs no validation
+    (correct, since it runs at every search node). So play_game validates
+    the returned move against legal_moves() itself: an illegal move ends the
+    game immediately, tagged "illegal_move" and scored a draw, for the same
+    reason as "agent_error" above - the game was never resolved, so there is
+    no principled winner to report.
     """
     rng = random.Random(seed)
     state = game.initial_state()
@@ -90,24 +102,39 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
             break
 
         side = state.side_to_move
-        legal_count = len(game.legal_moves(state))
+        legal = game.legal_moves(state)
         decision = decide(agents[side], game, state,
                           config["time_budget_s"], config["max_nodes"], rng,
                           **kwargs)
         agent_failed = decision.move is None
+        illegal = not agent_failed and decision.move not in legal
+
+        if illegal:
+            tag = MoveTag.ERROR.value
+            try:
+                move_str = game.move_to_str(decision.move)
+            except Exception:
+                move_str = repr(decision.move)
+        else:
+            tag = decision.tag.value
+            move_str = "--" if agent_failed else game.move_to_str(decision.move)
+
         moves.append(MoveRecord(
             ply=ply,
             agent=agent_names[side],
             side=side,
-            tag=decision.tag.value,
+            tag=tag,
             elapsed_s=decision.elapsed_s,
             nodes=decision.nodes,
             simulations=decision.simulations,
             depth=decision.depth,
-            move="--" if agent_failed else game.move_to_str(decision.move),
-            legal_move_count=legal_count,
+            move=move_str,
+            legal_move_count=len(legal),
         ))
         ply += 1
+        if illegal:
+            end_reason = "illegal_move"
+            break
         if agent_failed:
             end_reason = "agent_error"
             break
@@ -135,10 +162,10 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
 
 def _winner(game, state, end_reason):
     # type: (Any, Any, str) -> str
-    if end_reason in ("ply_cap", "agent_error"):
-        # A ply-cap or agent-failure ending gives no principled winner: the
-        # game was cut off, not resolved, so scoring it draw is the only
-        # choice that does not invent a result.
+    if end_reason in ("ply_cap", "agent_error", "illegal_move"):
+        # A ply-cap, agent-failure, or illegal-move ending gives no
+        # principled winner: the game was cut off, not resolved, so scoring
+        # it draw is the only choice that does not invent a result.
         return "draw"
     outcome = game.result(state)      # from the perspective of side_to_move
     if outcome == DRAW:
