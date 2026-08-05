@@ -896,9 +896,12 @@ Queen-slide movement with rays precomputed at import, and uniform auto-
 blocking with no exempt cells, which keeps move generation a single code path
 and makes the 23-ply bound provable.
 
-Tests assert the derived properties from the gamebook directly: twelve moves
-at ply one, sixteen from the centre, exactly one cell blocking per ply, no
-game exceeding 23 plies, and no draws."
+Tests assert the derived properties from the gamebook directly: eleven moves
+at ply one, sixteen from the centre when the opponent stands off its rays,
+fifteen when the opponent truncates one, exactly one cell blocking per ply, no
+game exceeding 23 plies, and no draws. The eleven is deliberate: the southward
+ray from the starting cell yields three moves, not four, because it stops
+before the opposing pawn."
 ```
 
 ---
