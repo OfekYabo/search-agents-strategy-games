@@ -13,7 +13,7 @@ A "game" is a module (or any namespace) exposing pure functions:
 
 Rules for each game are specified in docs/games/, which is authoritative.
 """
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 WIN = 1.0
 DRAW = 0.0
@@ -81,7 +81,15 @@ def check_conformance(game, rng, n_games=200, max_plies=1000, side_of=None):
                 )
 
             before = side_of(state)
-            state = game.apply_move(state, move)
+            try:
+                state = game.apply_move(state, move)
+            except ConformanceError:
+                raise
+            except Exception as exc:
+                raise ConformanceError(
+                    "game %d ply %d: apply_move(%r) raised %s: %s"
+                    % (game_index, ply, move, type(exc).__name__, exc)
+                )
             if side_of(state) == before:
                 raise ConformanceError(
                     "game %d ply %d: apply_move did not flip side_to_move"

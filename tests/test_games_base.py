@@ -84,6 +84,24 @@ class ConformanceTest(unittest.TestCase):
         with self.assertRaises(ConformanceError):
             check_conformance(Broken, random.Random(1), n_games=20, side_of=_side_of)
 
+    def test_detects_non_string_end_reason(self):
+        class Broken(_ToyGame):
+            @staticmethod
+            def end_reason(s):
+                return 42
+
+        with self.assertRaises(ConformanceError):
+            check_conformance(Broken, random.Random(1), n_games=20, side_of=_side_of)
+
+    def test_detects_apply_move_rejecting_a_legal_move(self):
+        class Broken(_ToyGame):
+            @staticmethod
+            def apply_move(s, m):
+                raise KeyError("bad move")
+
+        with self.assertRaises(ConformanceError):
+            check_conformance(Broken, random.Random(1), n_games=20, side_of=_side_of)
+
     def test_detects_game_exceeding_ply_bound(self):
         class Endless(_ToyGame):
             @staticmethod
