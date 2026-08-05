@@ -461,14 +461,58 @@ The honest position, separated by what can and cannot be cited:
 | `C = sqrt(2)` | **Citable.** Follows from the UCB1 regret bound (Auer, Cesa-Bianchi and Fischer, 2002) as applied to trees by Kocsis and Szepesvari (2006). Assumes rewards in `[0, 1]`, which is exactly why 2.3 maps them. The exact constant depends on how the formula is written, so **state our formula explicitly in the report**. |
 | `epsilon`, `k`, `D` | **Not citable.** These are domain-tuned hyperparameters everywhere in the literature; Browne et al. (2012), *A Survey of Monte Carlo Tree Search Methods*, IEEE TCIAIG, catalogues the design space precisely because no universal setting exists. |
 
-**Therefore they are measured, not asserted.** The calibration pilot is extended with a
-small MCTS hyperparameter sweep: vary one parameter at a time against a **fixed
-Alpha-Beta opponent** at the main time budget, and select on win rate. This turns "we
-chose 0.25" into a reported result with numbers behind it.
+**Therefore they are measured, not asserted** - and a first measurement shows the
+brief's defaults are badly wrong on two of the three games.
 
-Starting candidates: `epsilon in {0.1, 0.25, 0.5}`, `D in {20, 40, terminal}`, `k = 8`
-held fixed (it only binds on Ataxx, so it is swept only if Ataxx results look
-anomalous).
+**Measured at a 0.1s budget with `epsilon=0.25, k=8, D=40`:**
+
+| Game | Simulations/move | Per root move | Score vs the one-ply agent |
+|---|---|---|---|
+| Isolation | 635 | 56.3 | 0.85 |
+| Ultimate Tic-Tac-Toe | **6** | 0.7 | **0.29** |
+| Ataxx | 26 | 1.4 | **0.00** |
+
+A rollout at these settings performs up to `k x D = 320` child evaluations, so the
+guidance starves the tree. On UTTT that leaves **four to six simulations per move** -
+fewer than the number of root moves, so MCTS cannot try each candidate even once and
+plays near-randomly.
+
+**Sweeping the cost knobs on UTTT shows the guidance is a net loss there:**
+
+| Rollout config | Simulations | Score vs one-ply |
+|---|---|---|
+| `eps=0.25, k=8, D=40` (the default) | 6 | 0.29 |
+| `eps=0.8, k=2, D=10` | 115 | 0.62 |
+| **`eps=1.0` (pure random), to terminal** | **180** | **0.75** |
+
+> **This inverts PLAN.md's stated rationale for heuristic rollouts.** That rationale is
+> that vanilla MCTS with uninformed rollouts "can be considerably weaker than even a
+> shallow Alpha-Beta search", so guidance was added to make the comparison
+> strongest-versus-strongest. On UTTT the opposite holds at these settings: guidance
+> buys 6 simulations where random buys 180, and costs 0.46 of score. **Rollout guidance
+> has a cost/quality optimum, and being on the wrong side of it cripples the agent more
+> thoroughly than having no guidance at all.** This is a reportable finding in its own
+> right, not merely a tuning note - and it was only visible because we measured
+> simulations per move rather than win rates alone. A results table showing MCTS losing
+> would have looked entirely plausible.
+
+**Ataxx scores 0.00 against the one-ply agent at every configuration tried**, including
+ones reaching 205 simulations. With mid-game branching around 76, that is under three
+samples per root move, against an opponent that evaluates all 76 with a sound function.
+MCTS still beats the random agent 0.95 there, so it is starved rather than broken - this
+is a width-versus-budget wall, and the pilot must find a budget at which MCTS is viable
+on Ataxx at all, or report that none of the candidate budgets is.
+
+**Required sweep range**, widened because the best configuration found sits entirely
+outside the range originally specified here:
+
+- `epsilon in {0.25, 0.5, 0.8, 1.0}` - **must include 1.0**, i.e. pure random rollouts
+- `sample_k in {1, 2, 4, 8}` - **must include 1**
+- `rollout_depth in {10, 40, terminal}`
+
+**Report simulations per root move alongside every result.** Below roughly 10, MCTS is
+not meaningfully searching, and any conclusion drawn about it at that point is a
+statement about the budget rather than about the algorithm.
 
 ### 5.6 The constants are shared across all three games **[SIGN-OFF]**
 
@@ -491,11 +535,22 @@ because the games differ:
 That is the honest form of uniformity: one rule, applied identically, adapting because
 the domains differ.
 
-**The risk, and its mitigation.** A shared value could be badly wrong for one game,
-handicapping MCTS there and manufacturing a false "MCTS scales badly" conclusion. The
-sweep therefore reports **per-game sensitivity**, not just the pooled winner, so a
-domain where the shared choice is clearly poor is visible rather than silently baked
-into the result.
+**The risk is now measured, not hypothetical.** A shared value can be badly wrong for
+one game and manufacture a false "MCTS scales badly" conclusion. The data above shows
+exactly that: the default is tolerable on Isolation (0.85) and crippling on UTTT (0.29),
+and the gap is a property of branching factor and evaluator cost, not of the paradigm.
+
+This does **not** overturn the shared-constants decision, because per-game tuning would
+confound the scaling comparison in the opposite direction - Alpha-Beta has no equivalent
+knobs, so tuning MCTS per domain would hand it a per-domain advantage that varies with
+the domain. The resolution is unchanged in form but stricter in practice:
+
+- **Tune once, on the pooled result**, from the widened range above.
+- **Report per-game sensitivity**, so a domain where the shared choice is poor is visible
+  rather than silently baked into the conclusion.
+- **State the shared-constant choice as a limitation in the report.** If the pooled
+  optimum leaves MCTS starved on Ataxx, that must be presented as "MCTS was not viable at
+  these budgets on this game", not as "MCTS is weaker at scale".
 
 - **Node cap** - the tree is capped at `max_nodes`; on reaching it, expansion stops
   (selection and backpropagation continue) and `ctx.hit_memory_cap()` is called.
