@@ -52,6 +52,22 @@ class IsolationEvaluatorTest(unittest.TestCase):
                                      side_to_move=0)
         self.assertGreater(isolation_eval.evaluate(isolation, s), 0.0)
 
+    def test_stays_inside_the_reward_range_at_maximum_mobility_difference(self):
+        # The symmetric initial position (mobility 11 vs 11) always scores
+        # exactly 0.0 regardless of the scaling constant, so it cannot catch
+        # a miscalibrated _MAX_MOBILITY. This deliberately lopsided position
+        # - one pawn in the open centre, the opponent boxed into a corner by
+        # blocked cells so it has zero mobility - exercises the real bound.
+        blocked = (1 << 1) | (1 << 5) | (1 << 6)
+        s = isolation.IsolationState(blocked=blocked, pawns=(12, 0),
+                                     side_to_move=0)
+        v = isolation_eval.evaluate(isolation, s)
+        self.assertGreater(v, -1.0)
+        self.assertLess(v, 1.0)
+        # The tighter bound actually implied by _MAX_MOBILITY=16.0 and the
+        # divisor of 2 * _MAX_MOBILITY.
+        self.assertLessEqual(abs(v), 0.5)
+
 
 class HeuristicAgentTest(unittest.TestCase):
     def test_picks_the_highest_scoring_move(self):
@@ -97,6 +113,21 @@ class HeuristicAgentTest(unittest.TestCase):
             ctx = SearchContext(1.0, 100, clock=_Clock())
             chosen.add(agent(isolation, s, ctx, random.Random(seed)))
         self.assertGreater(len(chosen), 1)
+
+    def test_does_not_report_completion_when_the_budget_is_already_spent(self):
+        # A one-ply agent evaluates at most a few dozen candidates - far below
+        # the default check_every=512 - so without finer polling granularity
+        # should_stop() never actually samples the clock and an expired
+        # budget goes undetected.
+        s = isolation.initial_state()
+        clock = _Clock()
+        ctx = SearchContext(1.0, 100, clock=clock)
+        clock.now = 5.0  # advance well past the 1.0s budget before the agent runs
+        agent = heuristic_agent.make(lambda game, state: 0.0)
+        move = agent(isolation, s, ctx, random.Random(1))
+        self.assertIn(move, isolation.legal_moves(s))
+        self.assertFalse(ctx.finished)
+        self.assertLess(ctx.nodes, len(isolation.legal_moves(s)))
 
 
 if __name__ == "__main__":

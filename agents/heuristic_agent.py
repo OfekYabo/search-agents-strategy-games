@@ -11,6 +11,11 @@ def make(evaluate):
     """Build an agent from evaluate(game, state) -> float in (-1, 1)."""
 
     def agent(game, state, ctx, rng):
+        # A one-ply agent evaluates far fewer candidates than the default
+        # node-search polling interval (check_every=512), so without this
+        # should_stop() would never actually sample the clock and an expired
+        # budget would go undetected.
+        ctx.set_check_every(1)
         moves = game.legal_moves(state)
         best_score = None
         best_moves = []

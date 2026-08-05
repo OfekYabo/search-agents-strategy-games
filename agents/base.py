@@ -64,6 +64,19 @@ class SearchContext:
         self.finished = False
         self.depth_reached = None
 
+    def set_check_every(self, n):
+        # type: (int) -> None
+        """Request finer polling granularity than the node-search default.
+
+        A shallow agent (e.g. one-ply heuristic) may evaluate far fewer than
+        `check_every` candidates in a single decision, in which case the
+        internal poll counter never reaches the threshold and should_stop()
+        never actually samples the clock. Such an agent calls this to lower
+        the threshold - typically to 1 - so an expired budget is detected.
+        """
+        self._check_every = n
+        self._since_poll = 0
+
     def should_stop(self):
         # type: () -> bool
         if self._stopped:
