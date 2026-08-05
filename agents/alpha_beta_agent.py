@@ -10,10 +10,27 @@ returned move always comes from the last fully completed depth. That is what
 makes the time-limited tag meaningful - the move is a real answer to a shallower
 question rather than a half-formed answer to a deeper one.
 
-The transposition table lives in the agent, so it persists across the moves of a
-game. The runner constructs one agent per game; reusing one across a matchup
-would let a table already near its cap from a finished game report a memory cap
-on an early move of the next one.
+The transposition table is created once, in `make`, and lives in the agent
+object for its entire lifetime - it persists across every decision the agent
+makes, not just within one. That is what makes it useful at all: positions
+recur heavily between consecutive moves of the same game (the position after
+the opponent's reply is frequently a state this agent already explored several
+plies deep while choosing its own previous move), so a table that survived
+would let those searches reuse each other's work instead of starting cold
+every time. The runner therefore MUST construct a fresh agent per game -
+see docs/spec/technical-spec.md section 5.0 - and never reuse one across a
+matchup: reusing one would let a table already saturated near its cap from a
+finished game report a memory cap on an early move of the next one, an
+attribution error with nothing to reveal it.
+
+A consequence worth stating rather than discovering from the data: once the
+table reaches `max_entries` partway through a game, every remaining decision
+in that same game keeps hitting the cap too (nothing is ever evicted, so a
+full table stays full), so `hit_memory_cap()` - and therefore the
+`memory-limited` tag - becomes sticky for the rest of that game rather than a
+per-move event. A high memory-limited fraction in the study's results should
+be read as "the table saturated early in some games," not as "many
+independent moves each happened to hit a cap."
 """
 import itertools
 from typing import Any
@@ -32,10 +49,15 @@ class _Timeout(Exception):
 def make(evaluate, max_entries=200000, max_depth=64):
     # type: (Any, int, int) -> Any
     """Build an Alpha-Beta agent. `evaluate(game, state) -> float` in (-1, 1),
-    from the perspective of that state's side to move."""
+    from the perspective of that state's side to move.
+
+    The transposition table is created here, once, and closed over by `agent`
+    below - it lives for the lifetime of the returned callable, i.e. for every
+    decision this particular agent object ever makes. Callers must build a new
+    agent per game (docs/spec/technical-spec.md section 5.0)."""
+    table = {}
 
     def agent(game, state, ctx, rng):
-        table = {}
         best_move = None
 
         for depth in itertools.count(1):

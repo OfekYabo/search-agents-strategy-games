@@ -96,6 +96,49 @@ class AlphaBetaTest(unittest.TestCase):
                 "depth-%s search does not produce - a partial iteration leaked"
                 % (budget, d.depth, d.depth))
 
+    def test_the_table_persists_across_decisions(self):
+        # A generous budget and a fixed max_depth make this depth-controlled
+        # rather than time-controlled: the only thing that can change the node
+        # count between the two searches of the same position is whatever the
+        # table already knows.
+        depth = 6
+        s0 = iso.initial_state()
+        agent = alpha_beta_agent.make(isolation_eval.evaluate, max_depth=depth)
+
+        ctx0 = SearchContext(60.0, 10 ** 9)
+        move0 = agent(iso, s0, ctx0, random.Random(1))
+        s1 = iso.apply_move(s0, move0)
+
+        ctx1 = SearchContext(60.0, 10 ** 9)
+        agent(iso, s1, ctx1, random.Random(1))
+
+        fresh = alpha_beta_agent.make(isolation_eval.evaluate, max_depth=depth)
+        ctx_fresh = SearchContext(60.0, 10 ** 9)
+        fresh(iso, s1, ctx_fresh, random.Random(1))
+
+        self.assertLess(
+            ctx1.nodes, ctx_fresh.nodes,
+            "a second decision from the same agent should need fewer nodes "
+            "than a fresh agent on the same position, because its table "
+            "already holds work from the previous decision (%d vs %d nodes)"
+            % (ctx1.nodes, ctx_fresh.nodes))
+
+    def test_a_saturated_table_keeps_reporting_the_cap(self):
+        tiny = alpha_beta_agent.make(isolation_eval.evaluate, max_entries=64)
+        s = iso.initial_state()
+        capped_once = False
+        for _ in range(5):
+            ctx = SearchContext(0.5, 100000)
+            move = tiny(iso, s, ctx, random.Random(1))
+            if ctx.memory_capped:
+                capped_once = True
+            elif capped_once:
+                self.fail("memory cap stopped being reported on a later "
+                          "decision, but a full table is never evicted from")
+            s = iso.apply_move(s, move)
+        self.assertTrue(capped_once,
+                        "a 64-entry table must saturate within a few decisions")
+
     def test_discards_an_incomplete_iteration(self):
         # A clock that expires partway through the first deepening still yields a
         # legal move, and the move is not tagged normal.
