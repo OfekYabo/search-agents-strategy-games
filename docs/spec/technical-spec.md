@@ -255,8 +255,36 @@ reaches 512, **the clock is never read at all**, and the agent reports `normal` 
 against a budget that expired before it was invoked. Its `time-limited` tag becomes
 unreachable by construction while still appearing in the taxonomy.
 
-Shallow agents therefore call `ctx.set_check_every(1)` before searching. The cost is a
-few dozen clock reads per decision - microseconds against budgets of 50ms and up.
+**The same trap catches any agent whose polled unit is expensive, and there it is far
+worse than a dead tag - it breaks the budget itself.** MCTS polls once per *simulation*,
+and a rollout costs roughly 0.35ms, so 512 of them is about 0.18s. Any budget below that
+was never checked at all. Measured before the fix:
+
+| Budget | Elapsed | Overshoot |
+|---|---|---|
+| 0.02s | 0.277s | **+1283%** |
+| 0.05s | 0.234s | **+367%** |
+| 0.10s | 0.236s | +136% |
+| 0.40s | 0.482s | +20% |
+
+**This would have invalidated the study, not merely degraded it.** Equal per-move time
+budgets are the premise the entire paradigm comparison rests on, and the overshoot grew
+as the budget shrank - so the bias was systematic and largest in the `hard` config that
+exists specifically to expose degradation.
+
+**The rule, generalised:** `check_every` is safe at its default only when each polled
+call represents a *cheap* unit of work, such as a single node. Any agent that polls at a
+coarser granularity - a one-ply agent polling per candidate move, MCTS polling per
+rollout - must call `ctx.set_check_every(1)` before searching. The cost is a few hundred
+clock reads per decision, microseconds against budgets of 50ms and up.
+
+> **Budget adherence is a required check, not an assumption. [CRITICAL]** The
+> calibration pilot must measure, for every agent and every budget, the mean and maximum
+> `elapsed_s` per decision and **assert it is within a stated tolerance of the budget**
+> (10% is ample - the fixed agents come in at +0%). A run where any agent overshoots must
+> fail loudly rather than produce results, because nothing downstream reveals this: the
+> CSV looks entirely normal, every tag is plausible, and the only symptom is that one
+> agent silently had more thinking time than the other.
 
 > **Expected result, to be stated in the report rather than discovered in a table.**
 > With the check made genuine, the Heuristic agent is still expected to be tagged
@@ -564,6 +592,13 @@ single game individually reproducible for debugging without re-running the tourn
 ### 7.3 `calibrate.py`
 
 Three phases, run in order. Each produces numbers the report can cite.
+
+**Phase 0 - budget adherence. [GATE - run first, fail loudly]** For every agent and
+every candidate budget, measure mean and maximum `elapsed_s` per decision and assert it
+is within **10%** of the budget. An agent that overshoots has not been constrained, so
+every later phase and the whole tournament would be measuring the wrong thing. This phase
+exists because MCTS was once overshooting a 0.02s budget by 1283% with no visible symptom
+(4.2). **If this gate fails, stop; do not proceed to phase 1.**
 
 **Phase 1 - time budgets.** For each game, Alpha-Beta vs MCTS across candidate budgets
 `[0.1, 0.25, 0.5, 1, 2, 5]` s, recording the tag distribution and **real
