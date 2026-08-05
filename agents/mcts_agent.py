@@ -11,10 +11,20 @@ weak; pure greedy rollouts are deterministic and collapse the diversity the
 Monte Carlo estimate depends on. These constants are hyperparameters, selected
 empirically in the calibration pilot rather than asserted - only the exploration
 constant has a principled derivation.
+
+The tree's node cap (`max_nodes`) is set here, at construction, and nowhere
+else - it is never read from SearchContext.max_nodes. This is deliberate, not
+an oversight: an Alpha-Beta transposition entry is a 4-tuple, while an MCTS
+tree node holds a full game state, a child list and counters - plausibly five
+times the size. docs/spec/technical-spec.md section 4.2b requires the two
+agents' memory caps to be calibrated to equal *byte* footprints, not equal
+counts, so a single shared integer was never a valid control channel for both.
+Each agent therefore takes its own cap from its own config key, and
+SearchContext.max_nodes is informational only (see agents/base.py).
 """
 import math
 import random
-from typing import Any, List, Optional
+from typing import Any, List
 
 DEFAULT_EXPLORATION = math.sqrt(2)
 
@@ -37,8 +47,8 @@ class _Node(object):
 
 
 def make(evaluate, exploration=DEFAULT_EXPLORATION, epsilon=0.25, sample_k=8,
-         rollout_depth=40, max_nodes=None):
-    # type: (Any, float, float, int, int, Optional[int]) -> Any
+         rollout_depth=40, max_nodes=200000):
+    # type: (Any, float, float, int, int, int) -> Any
 
     def agent(game, state, ctx, rng):
         # A single simulation here is a full rollout (up to rollout_depth
@@ -52,7 +62,7 @@ def make(evaluate, exploration=DEFAULT_EXPLORATION, epsilon=0.25, sample_k=8,
         # same fix heuristic_agent applies for its own cheap-decision case.
         ctx.set_check_every(1)
         root = _Node(state, None, None, list(game.legal_moves(state)))
-        cap = max_nodes if max_nodes is not None else ctx.max_nodes
+        cap = max_nodes
         nodes = 1
 
         while not ctx.should_stop():

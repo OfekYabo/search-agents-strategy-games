@@ -44,6 +44,16 @@ class SearchContext:
     hit_memory_cap() when a memory-backed structure (transposition table,
     tree node pool) fills, is the agent's responsibility.
 
+    `max_nodes` is informational only: it is recorded here purely so it can
+    be logged (experiments/logger.py writes it to the CSV alongside every
+    row), and no agent reads it as a cap. Each search agent takes its own
+    memory cap as a constructor parameter, from its own config key
+    (Alpha-Beta's `max_entries`, MCTS's `max_nodes` argument to `make()`) -
+    see agents/alpha_beta_agent.py and agents/mcts_agent.py. The two caps are
+    deliberately not the same number, since the two agents' memory-backed
+    structures differ in size per entry, so a single shared field on this
+    context was never a valid control channel for both.
+
     depth_reached is a hook for iterative-deepening agents (Alpha-Beta) to
     set to the deepest fully completed iteration; it stays None for agents
     that never set it and is surfaced as Decision.depth.

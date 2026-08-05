@@ -3,8 +3,31 @@ import unittest
 
 from agents import alpha_beta_agent
 from agents.base import MoveTag, SearchContext, decide
-from evaluation import isolation_eval
-from games import isolation as iso
+from evaluation import ataxx_eval, isolation_eval, uttt_eval
+from games import ataxx, isolation as iso, uttt
+
+
+def _random_midgame(game, plies, seed):
+    """A state reached by up to `plies` random legal moves, stopping early if
+    the game ends first."""
+    rng = random.Random(seed)
+    s = game.initial_state()
+    for _ in range(plies):
+        if game.is_terminal(s):
+            break
+        s = game.apply_move(s, rng.choice(game.legal_moves(s)))
+    return s
+
+
+def _ataxx_cell(r, c):
+    return r * 7 + c
+
+
+def _ataxx_mask(*cells):
+    m = 0
+    for c in cells:
+        m |= 1 << c
+    return m
 
 
 class FakeClock:
@@ -166,6 +189,73 @@ class AlphaBetaTest(unittest.TestCase):
         d = decide(self.agent, iso, s, 0.0005, 100000, random.Random(1))
         self.assertIn(d.tag, (MoveTag.TIME_LIMITED, MoveTag.MEMORY_LIMITED))
         self.assertIn(d.move, iso.legal_moves(s))
+
+    def test_the_cap_comes_from_construction_not_the_context(self):
+        # A small construction-time cap must still govern even when ctx
+        # carries a wildly larger max_nodes.
+        tiny = alpha_beta_agent.make(isolation_eval.evaluate, max_entries=8)
+        huge_ctx = SearchContext(0.3, 10 ** 9)
+        tiny(iso, iso.initial_state(), huge_ctx, random.Random(1))
+        self.assertTrue(huge_ctx.memory_capped,
+                        "a small max_entries must cap the table regardless "
+                        "of ctx.max_nodes")
+
+        # A (default, effectively huge) construction-time cap must not be
+        # overridden by a tiny ctx.max_nodes.
+        roomy = alpha_beta_agent.make(isolation_eval.evaluate)
+        tiny_ctx = SearchContext(0.05, 1)
+        roomy(iso, iso.initial_state(), tiny_ctx, random.Random(1))
+        self.assertFalse(tiny_ctx.memory_capped,
+                         "ctx.max_nodes=1 must not cap a 200000-entry table")
+
+
+class CrossGameTest(unittest.TestCase):
+    """Alpha-Beta on Ataxx and UTTT, not just Isolation - see Finding 2 of the
+    branch review: nothing previously verified PASS handling, rollout-free
+    proven-value behaviour on a drawable game, or basic legality on either
+    game."""
+
+    def test_returns_a_legal_move_on_ataxx(self):
+        s = _random_midgame(ataxx, 10, seed=5)
+        agent = alpha_beta_agent.make(ataxx_eval.evaluate)
+        ctx = SearchContext(0.1, 100000)
+        move = agent(ataxx, s, ctx, random.Random(1))
+        self.assertIn(move, ataxx.legal_moves(s))
+
+    def test_returns_a_legal_move_on_uttt(self):
+        s = _random_midgame(uttt, 10, seed=7)
+        agent = alpha_beta_agent.make(uttt_eval.evaluate)
+        ctx = SearchContext(0.1, 100000)
+        move = agent(uttt, s, ctx, random.Random(1))
+        self.assertIn(move, uttt.legal_moves(s))
+
+    def test_handles_a_pass_only_position_on_ataxx(self):
+        # Same construction as test_ataxx.py's
+        # test_a_player_with_no_move_passes_rather_than_losing: P1 has a
+        # single piece walled in by P0 pieces at every distance <= 2.
+        p1 = _ataxx_mask(_ataxx_cell(0, 0))
+        p0_cells = [_ataxx_cell(r, c) for r in range(3) for c in range(3)
+                    if (r, c) != (0, 0)]
+        s = ataxx.AtaxxState(boards=(_ataxx_mask(*p0_cells), p1),
+                             side_to_move=1, plies_since_progress=0)
+        self.assertEqual(ataxx.legal_moves(s), [ataxx.PASS])
+
+        agent = alpha_beta_agent.make(ataxx_eval.evaluate)
+        ctx = SearchContext(0.1, 100000)
+        move = agent(ataxx, s, ctx, random.Random(1))
+        self.assertEqual(move, ataxx.PASS)
+
+    def test_proven_value_check_behaves_on_a_drawable_game(self):
+        # UTTT can draw, unlike Isolation, so this exercises the
+        # abs(value) >= 1.0 proven-win/loss shortcut on a game where that
+        # value is not simply "the only possible non-loss outcome".
+        s = _random_midgame(uttt, 10, seed=11)
+        agent = alpha_beta_agent.make(uttt_eval.evaluate)
+        ctx = SearchContext(0.15, 100000)
+        move = agent(uttt, s, ctx, random.Random(1))
+        self.assertIn(move, uttt.legal_moves(s))
+        self.assertIsNotNone(ctx.depth_reached)
+        self.assertGreaterEqual(ctx.depth_reached, 1)
 
 
 if __name__ == "__main__":

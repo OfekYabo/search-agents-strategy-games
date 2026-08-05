@@ -31,6 +31,16 @@ full table stays full), so `hit_memory_cap()` - and therefore the
 per-move event. A high memory-limited fraction in the study's results should
 be read as "the table saturated early in some games," not as "many
 independent moves each happened to hit a cap."
+
+`max_entries` is this agent's memory cap. It is set once, at construction,
+from the config's `max_entries` key, and is never read from
+SearchContext.max_nodes (SearchContext.max_nodes is informational only - see
+agents/base.py). It is deliberately *not* the same number as MCTS's
+`max_nodes`: a transposition entry here is a fixed 4-tuple, while an MCTS
+tree node holds a full game state, a child mapping and counters - plausibly
+five times the size per entry - so the two caps must be calibrated
+separately to equal byte footprints (docs/spec/technical-spec.md section
+4.2b), not treated as interchangeable counts.
 """
 import itertools
 from typing import Any
