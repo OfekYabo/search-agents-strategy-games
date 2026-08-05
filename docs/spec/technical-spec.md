@@ -281,6 +281,13 @@ An exception is caught, recorded, tagged `error`, and **a uniformly random legal
 is played** so the game can continue and the tournament does not abort. Error moves are
 logged and excluded from the main statistics, per PLAN.md.
 
+**The fallback is itself guarded.** If `legal_moves` also raises, or returns `[]` so
+that choosing from it fails, `decide` returns `move = None` with both failures recorded
+in the error text rather than letting the second exception escape. The guarantee is
+that a failing agent costs **one tagged move, never the run** - an unguarded fallback
+would have relocated the crash rather than contained it. `runner.play_game` must
+therefore treat `move is None` as an aborted game rather than attempting to apply it.
+
 ---
 
 ## 5. Agents
