@@ -51,7 +51,7 @@ Maxima below are **derived from the rules** and need no simulation. Averages are
 
 | Game | State-space | log10 | Max branching | Avg branching | Max length | Avg length |
 |---|---|---|---|---|---|---|
-| Isolation 5x5 | 1.01 x 10^10 | 10.0 | **16** (12 at ply 1) | pending | **23** plies | pending |
+| Isolation 5x5 | 1.01 x 10^10 | 10.0 | **16** (11 at ply 1) | pending | **23** plies | pending |
 | Ataxx 7x7 | 4.78 x 10^23 | 23.7 | **<= 17e** (`<= 765`) | pending (ref. ~60) | **300** plies, enforced | pending (ref. ~100) |
 | Ultimate Tic-Tac-Toe | 8.89 x 10^39 | 39.9 | **81** at ply 1, then <= 9 forced / up to ~70 free | pending | **81** plies | pending |
 
@@ -331,7 +331,7 @@ search-agents-strategy-games/
 
 **Resolved**
 
-1. ~~**Isolation movement rule**~~ - **queen-slide** on 5x5, vacated cell auto-blocks uniformly with no exempt cells, pawns start `(0,2)` and `(4,2)`. Max branching 16 (12 at ply 1), max 23 plies, no draws possible. See [gamebook](docs/games/isolation.md).
+1. ~~**Isolation movement rule**~~ - **queen-slide** on 5x5, vacated cell auto-blocks uniformly with no exempt cells, pawns start `(0,2)` and `(4,2)`. Max branching 16 (11 at ply 1), max 23 plies, no draws possible. See [gamebook](docs/games/isolation.md).
 2. ~~**Ataxx rules**~~ - a player with no legal move **passes**, it does not lose (the original wording here was wrong). Termination is guaranteed by a 30-ply no-progress rule with a 300-ply hard cap, because the published rules do not terminate: jump moves leave the occupied-cell count unchanged, so jump-only play can run forever.
 3. ~~**Ultimate Tic-Tac-Toe rules**~~ - a local board that is won or drawn is **closed** to further play; a drawn local board counts for neither player.
 4. ~~**Terminal reward scale**~~ - `+1 / 0 / -1` in all three games, mapped to `[0, 1]` for MCTS.
