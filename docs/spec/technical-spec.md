@@ -202,10 +202,18 @@ class Decision:
     move: M
     tag: MoveTag
     elapsed_s: float
-    nodes: int              # nodes expanded (AB) or simulations run (MCTS)
-    depth: Optional[int]    # deepest completed iteration; AB only
+    nodes: Optional[int]        # Alpha-Beta nodes expanded; None for MCTS
+    simulations: Optional[int]  # MCTS rollouts run; None for Alpha-Beta
+    depth: Optional[int]        # deepest completed iteration; Alpha-Beta only
     error: Optional[str]
 ```
+
+**Both counters are `Optional` and auto-detected**, not switched on by the caller: a
+reported `0` is indistinguishable in a CSV from "this agent does not count this
+thing", and MCTS never calls `note_node()` while Alpha-Beta never calls
+`note_simulation()`. Reporting `0` would put a false "expanded 0 nodes" on every MCTS
+row of the file the headline results are computed from. Auto-detection also means no
+caller can silently drop a count by forgetting a flag.
 
 ### 4.2 `SearchContext` — what the agent is handed
 

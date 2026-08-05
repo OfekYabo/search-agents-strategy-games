@@ -493,8 +493,8 @@ class Decision:
     move: Any
     tag: MoveTag
     elapsed_s: float
-    nodes: int
-    simulations: Optional[int]
+    nodes: Optional[int]        # Alpha-Beta nodes expanded; None for MCTS
+    simulations: Optional[int]  # MCTS rollouts run; None for Alpha-Beta
     depth: Optional[int]
     error: Optional[str]
 
