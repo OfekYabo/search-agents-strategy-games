@@ -156,7 +156,7 @@ class UtttRulesTest(unittest.TestCase):
         # but empty cells would still exist under a naive rule.
         status = (1, 2, 1,
                   2, 1, 2,
-                  1, 2, 3)
+                  2, 2, 3)
         s = uttt.initial_state()
         s = uttt.UtttState(marks=s.marks, status=status, send=-1,
                            side_to_move=0,
