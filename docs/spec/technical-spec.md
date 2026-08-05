@@ -316,6 +316,18 @@ cap is the one where `memory-limited` appears **as a meaningful minority** at th
 time budget - present enough to analyse, not so tight that it dominates and turns the
 experiment into a memory study.
 
+**Each agent receives its cap at construction, from its own config key. [CRITICAL -
+this was once wired wrongly.]** `SearchContext.max_nodes` is **informational only**:
+recorded for logging, never read by any agent as a cap. An earlier version had MCTS
+falling back to it while Alpha-Beta ignored it entirely, so a memory sweep would have
+moved one agent's `memory-limited` rate and not the other's, under a single CSV column
+implying it governed both. Nothing would have crashed or failed.
+
+**The CSV must therefore log both caps, not one.** `games.csv` carries `max_entries`
+*and* `max_nodes` as separate columns, and the tournament constructs
+`alpha_beta_agent.make(evaluate, max_entries=config["max_entries"])` and
+`mcts_agent.make(evaluate, max_nodes=config["max_nodes"])` per game.
+
 **The two caps are separate config keys, and equal counts are not equal memory.**
 `max_entries` (Alpha-Beta) and `max_nodes` (MCTS) must be **calibrated to comparable
 byte footprints**, not set to the same number. A transposition-table entry is a
