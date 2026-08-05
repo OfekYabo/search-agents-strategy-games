@@ -949,7 +949,10 @@ class HeuristicAgentTest(unittest.TestCase):
         target = isolation.legal_moves(isolation.initial_state())[2]
 
         def evaluate(game, state):
-            return 0.9 if state.pawns[0] == target else -0.9
+            # `state` here is the CHILD, whose side_to_move is the opponent, so
+            # evaluate() scores it from the opponent's perspective and the agent
+            # negates it. The move we want chosen must therefore look BAD here.
+            return -0.9 if state.pawns[0] == target else 0.9
 
         agent = heuristic_agent.make(evaluate)
         s = isolation.initial_state()
