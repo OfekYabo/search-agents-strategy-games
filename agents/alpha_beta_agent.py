@@ -68,6 +68,21 @@ def make(evaluate, max_entries=200000, max_depth=64):
     table = {}
 
     def agent(game, state, ctx, rng):
+        # An Alpha-Beta node is genuinely cheap, and this search visits far
+        # more of them per decision than heuristic_agent or mcts_agent visit
+        # of their own (much more expensive) units - up to tens of thousands
+        # of nodes on Isolation. Left at the should_stop() default of 512,
+        # that many nodes between clock checks can be a sizeable fraction of
+        # an entire shallow-budget search (e.g. ~1500 nodes total on UTTT at
+        # a 0.1s budget), so the clock check meant to enforce the budget
+        # barely gets a chance to fire before the budget is already blown.
+        # 16 keeps the residual overshoot to about a sixteenth of that full
+        # 512-node block - a small single-digit percentage - while the extra
+        # clock reads stay negligible. Contrast heuristic_agent and
+        # mcts_agent, which set 1: their polled units (a one-ply evaluation,
+        # a full MCTS rollout) are expensive enough that even checking every
+        # single one adds no meaningful overhead.
+        ctx.set_check_every(16)
         best_move = None
 
         for depth in itertools.count(1):

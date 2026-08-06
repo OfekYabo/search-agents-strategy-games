@@ -87,7 +87,7 @@ def make(evaluate, exploration=DEFAULT_EXPLORATION, epsilon=0.25, sample_k=8,
 
             # Simulation, then backpropagation with the perspective flipping at
             # every level.
-            reward = _rollout(game, node.state, rng, evaluate, epsilon,
+            reward = _rollout(game, node.state, rng, ctx, evaluate, epsilon,
                               sample_k, rollout_depth)
             ctx.note_simulation()
 
@@ -122,8 +122,8 @@ def _select(node, exploration):
     return best
 
 
-def _rollout(game, state, rng, evaluate, epsilon, sample_k, depth_cap):
-    # type: (Any, Any, random.Random, Any, float, int, int) -> float
+def _rollout(game, state, rng, ctx, evaluate, epsilon, sample_k, depth_cap):
+    # type: (Any, Any, random.Random, Any, Any, float, int, int) -> float
     """Play out from `state`, returning a reward in [0, 1] from the perspective
     of the side to move at `state`."""
     root_side = state.side_to_move
@@ -135,6 +135,17 @@ def _rollout(game, state, rng, evaluate, epsilon, sample_k, depth_cap):
             if current.side_to_move != root_side:
                 value = -value
             return (value + 1.0) / 2.0
+
+        # An anytime agent has to be interruptible at any point, not just at
+        # rollout boundaries: a UTTT rollout costs ~25.8ms, and with no check
+        # inside it the worst-case overshoot is bounded below by the cost of
+        # one full rollout (the 35% overshoot this fix addresses). Stopping
+        # here is not a special case - a rollout cut short by the clock is
+        # just a shallower rollout, exactly like one cut short by depth_cap,
+        # so it falls through to the same evaluate-and-map-to-[0,1] path
+        # below rather than being discarded or returning a sentinel.
+        if ctx.should_stop():
+            break
 
         moves = game.legal_moves(current)
         if len(moves) == 1 or rng.random() < epsilon:

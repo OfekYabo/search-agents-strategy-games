@@ -258,5 +258,38 @@ class CrossGameTest(unittest.TestCase):
         self.assertGreaterEqual(ctx.depth_reached, 1)
 
 
+class BudgetPollingTest(unittest.TestCase):
+    """Regression coverage for the polling-granularity bug: Alpha-Beta nodes
+    are cheap and plentiful (up to tens of thousands per decision), so the
+    should_stop() default of check_every=512 lets a single unchecked block
+    burn a large fraction of a shallow-budget search before the clock is
+    ever sampled. See agents/alpha_beta_agent.py for the fix."""
+
+    def test_requests_finer_clock_polling_than_the_default(self):
+        agent = alpha_beta_agent.make(isolation_eval.evaluate)
+        ctx = SearchContext(0.05, 100000)
+        agent(iso, iso.initial_state(), ctx, random.Random(1))
+        self.assertEqual(ctx._check_every, 16,
+                         "alpha-beta must request a finer polling interval "
+                         "than the should_stop() default of 512")
+
+    def test_respects_a_tight_budget_on_a_wide_game(self):
+        # UTTT is the widest of the three games and, at a tight 0.1s budget,
+        # Alpha-Beta explores only ~1500 nodes per decision - a regime where
+        # the default check_every=512 leaves the clock unchecked for roughly
+        # a third of the entire search. This is the regression test for that
+        # overrun: see .superpowers/sdd/2026-08-06-plan-3-experiments/
+        # ab-polling-fix-report.md for the evidence that it fails without the
+        # agents/alpha_beta_agent.py fix.
+        s = _random_midgame(uttt, 12, seed=3)
+        agent = alpha_beta_agent.make(uttt_eval.evaluate)
+        decision = decide(agent, uttt, s, 0.1, 100000, random.Random(1))
+        self.assertIn(decision.move, uttt.legal_moves(s))
+        self.assertLessEqual(
+            decision.elapsed_s, 0.125,
+            "alpha-beta overran a 0.1s budget by more than the 25%% "
+            "tolerance (elapsed_s=%.4fs)" % decision.elapsed_s)
+
+
 if __name__ == "__main__":
     unittest.main()

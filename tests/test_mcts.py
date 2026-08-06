@@ -1,12 +1,25 @@
 import dataclasses
 import math
 import random
+import time
 import unittest
 
 from agents import mcts_agent
 from agents.base import MoveTag, SearchContext, decide
 from evaluation import ataxx_eval, isolation_eval, uttt_eval
 from games import ataxx, isolation as iso, uttt
+
+
+class _ExpiredClock(object):
+    """A fake clock whose readings can be advanced after a SearchContext has
+    already captured its start time, so a context can be made to look
+    already-expired by the time the code under test consults it."""
+
+    def __init__(self):
+        self.t = 0.0
+
+    def __call__(self):
+        return self.t
 
 
 def _random_midgame(game, plies, seed):
@@ -96,7 +109,8 @@ class MctsTest(unittest.TestCase):
     def test_rollout_rewards_stay_inside_the_unit_interval(self):
         rng = random.Random(2)
         for _ in range(200):
-            r = mcts_agent._rollout(iso, iso.initial_state(), rng,
+            ctx = SearchContext(5.0, 100000)
+            r = mcts_agent._rollout(iso, iso.initial_state(), rng, ctx,
                                     isolation_eval.evaluate, 0.25, 8, 40)
             self.assertGreaterEqual(r, 0.0)
             self.assertLessEqual(r, 1.0)
@@ -174,6 +188,44 @@ class CrossGameTest(unittest.TestCase):
         move = agent(ataxx, s, ctx, random.Random(1))
         self.assertIn(move, ataxx.legal_moves(s))
         self.assertGreater(ctx.simulations, 0)
+
+    def test_rollouts_are_interruptible(self):
+        # A context that is already expired by the time _rollout consults it
+        # (check_every=1, so every should_stop() call samples the clock)
+        # must cut the rollout short at the very first ply, not run it to
+        # depth_cap. "Promptly" is asserted on wall-clock duration: a full
+        # UTTT rollout costs ~25.8ms, so returning in a small fraction of
+        # that is strong evidence only a handful of plies (in this case,
+        # zero - the position is non-terminal, so the first should_stop()
+        # check fires before any move is made) ran.
+        s = _random_midgame(uttt, 12, seed=7)
+        clock = _ExpiredClock()
+        ctx = SearchContext(0.01, 100000, check_every=1, clock=clock)
+        clock.t = 1000.0  # advance the clock past the budget post-construction
+        rng = random.Random(3)
+
+        start = time.perf_counter()
+        r = mcts_agent._rollout(uttt, s, rng, ctx, uttt_eval.evaluate,
+                                0.25, 8, 40)
+        duration = time.perf_counter() - start
+
+        self.assertGreaterEqual(r, 0.0)
+        self.assertLessEqual(r, 1.0)
+        self.assertLess(duration, 0.005,
+                        "an already-expired context should stop the rollout "
+                        "almost immediately, well under one rollout's "
+                        "~25.8ms cost")
+
+    def test_respects_a_tight_budget_on_uttt(self):
+        # The regression test that matters: without the in-rollout stop
+        # check, a rollout already in flight when the budget expires runs to
+        # completion, and on UTTT that overshoot alone is ~25.8ms - a 35%
+        # overshoot on a 0.1s budget's worth of overshoot bound this test
+        # would otherwise let slip through.
+        s = _random_midgame(uttt, 12, seed=11)
+        agent = mcts_agent.make(uttt_eval.evaluate)
+        d = decide(agent, uttt, s, 0.1, 100000, random.Random(1))
+        self.assertLessEqual(d.elapsed_s, 0.115)
 
 
 if __name__ == "__main__":
