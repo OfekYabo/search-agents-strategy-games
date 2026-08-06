@@ -169,11 +169,28 @@ Budgets cannot be chosen a priori. Procedure per game:
 4. **Easy config** = generous budget (mostly `normal` tags)
 5. **Hard config** = tight budget (mostly `time-limited` tags)
 
-| Game | Easy | Main (balanced) | Hard |
+| Game | Easy (generous) | Main (balanced) | Hard (tight) |
 |---|---|---|---|
-| Isolation 5x5 | *pilot output* | *pilot output* | *pilot output* |
-| Ataxx 7x7 | *pilot output* | *pilot output* | *pilot output* |
-| Ultimate Tic-Tac-Toe | *pilot output* | *pilot output* | *pilot output* |
+| Isolation 5x5 | 0.5 s | 0.1 s | 0.02 s |
+| Ataxx 7x7 | 2.0 s | 0.5 s | 0.1 s |
+| Ultimate Tic-Tac-Toe | 2.0 s | 0.5 s | 0.1 s |
+
+> **Note the direction:** *easy* means **more** time (search completes, mostly `normal` tags); *hard* means **less** (mostly `time-limited`). It is easy to read these backwards.
+
+**These were set by direct measurement, not guessed**, so the pilot now *confirms* them rather than discovering them. Search obtained per budget, measured on a mid-game position:
+
+| Budget | Isolation MCTS/root · AB depth | UTTT MCTS/root · AB depth | Ataxx MCTS/root · AB depth |
+|---|---|---|---|
+| 0.1 s | 1060 · 5 | 0.9 · 4 | 0.3 · 2 |
+| 0.5 s | 7227 · 5 | 4.9 · 5 | 1.3 · 3 |
+| 2.0 s | 33476 · 5 | 20.9 · 7 | 4.9 · 3 |
+| 5.0 s | 83845 · 5 | 52.8 · 8 | 10.6 · 4 |
+
+Three consequences, all of which belong in the report:
+
+- **Isolation is saturated for both agents at every budget.** Alpha-Beta completes at depth 5 in 508 nodes and *solves* the position regardless of time; MCTS has over a thousand simulations per root move even at 0.02 s. Neither agent is budget-limited here, so Isolation measures something different from the other two games - it is the control, not a degradation datapoint.
+- **Ataxx starves both paradigms**, and it is the *medium* state-space game. Alpha-Beta reaches only depth 2-4 even at 5 s against mid-game branching of ~82. **Width, not state-space size, is what defeats search here** - which is precisely why branching factor and state space had to be reported as separate axes.
+- **MCTS never becomes viable on Ataxx within affordable budgets.** It needs ~5 s to pass 10 simulations per root move, and a single 5 s config on Ataxx costs about **30 hours** of compute. We therefore report the starvation, with simulations-per-root-move alongside every result so it cannot be mistaken for an implementation failure. **That MCTS cannot convert a realistic budget into meaningful search on a high-branching game is an answer to the research question, not an obstacle to one.**
 
 Record the **hardware and Python version** alongside these values. A time budget is only meaningful relative to the machine that produced it, and the report needs that for reproducibility.
 
@@ -345,7 +362,7 @@ search-agents-strategy-games/
 
 **Deferred - waiting on measurement, does not block implementation**
 
-9. **Calibrated time/memory budgets** - an output of the pilot sweep. Cannot be resolved a priori; blocks only the tournament run.
+9. ~~**Calibrated time budgets**~~ - **set from direct measurement** (see the table above). The pilot now confirms rather than discovers them. **Memory caps remain outstanding** and are a genuine pilot output, since they must be calibrated to equal byte footprints across two structures of different size.
 10. ~~**Average branching factor + average game length**~~ - **measured** and recorded in the hardness table above. Ataxx does not match the published ~60/~100 and is not expected to: that reference is not of uniformly random play, and our board has 49 playable cells against its 47. The *shape* agrees - a rise to about 4.6x the opening width, then a decline, with the peak in the same relative position.
 11. **Ultimate Tic-Tac-Toe state-space bound** - the adopted `2 x 10 x 3^81` is correct but loose; a tighter bound is reachable once the rules are in code. Revisit at implementation time.
 
