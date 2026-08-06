@@ -907,14 +907,91 @@ Not a coding task. Run it, read it, decide.
 
 ---
 
-### Task 5: Run the tournament
+### Task 5: Full-pipeline smoke test — GATE before any long run
 
-- [ ] **Step 1: Smoke-run** one config, one game, two trials: `python3 -m experiments.tournament --games isolation --configs hard --trials 2`. Confirm both CSVs appear and look sane.
-- [ ] **Step 2: Estimate** total runtime from the smoke run before committing to the full grid.
-- [ ] **Step 3: Run the full grid** in the background: `python3 -m experiments.tournament --games all --configs all --trials 20 --out results/raw`. Expect roughly 10-21 hours; it resumes if interrupted.
-- [ ] **Step 4: Run the analysis**, `python3 -m experiments.analyse --raw results/raw | tee results/tables.md`, and commit the CSVs and tables.
+**Do not start a 21-hour run against an unvalidated pipeline.** This exercises every
+code path end to end — all three games, all four agents, all twelve matchups, both
+CSVs, resume, and the analysis — at the cheapest budget. It costs about **5 minutes**.
+
+- [ ] **Step 1: Run the full grid at one config, two trials, into a scratch directory**
+
+```bash
+python3 -m experiments.tournament --games all --configs hard --trials 2 --out results/smoke
+```
+
+Expected: 72 games (3 games x 12 matchups x 2 trials), roughly 5 minutes.
+
+- [ ] **Step 2: Check the output against this list.** Every item is a real failure mode:
+
+| Check | Why it matters |
+|---|---|
+| 72 rows in `games.csv` | the schedule covered the whole grid |
+| every `game` and `config` value correct | a copied `NAME` would mislabel a whole game's rows |
+| **zero rows with `end_reason` of `illegal_move` or `agent_error`** | either is a bug report, not a data point |
+| all four agents appear in both seat columns | no matchup silently skipped |
+| `nodes` populated for `alpha_beta` and empty for `mcts`; `simulations` the reverse | the two work units must never share a column |
+| `depth` populated for `alpha_beta` only | |
+| `winner` takes `first`, `second`, and on UTTT/Ataxx `draw` | a mapping stuck on one value is invisible in aggregate |
+| `elapsed_s` per move at or under its budget | budget adherence verified on real games, not only in isolation |
+| Ataxx ends via `board_full`, `no_progress` or `eliminated` | frequent `ply_cap` means the 300-cap is firing, which it should not |
+
+- [ ] **Step 3: Run the analysis against the smoke data**
+
+```bash
+python3 -m experiments.analyse --raw results/smoke
+```
+
+Confirm it produces tables without crashing and that the numbers are internally
+consistent — score rates within `[0, 1]`, and wins plus draws plus losses equal to games.
+
+- [ ] **Step 4: Estimate the full runtime** from the smoke run's measured seconds per
+      game per game type, and sanity-check it against the ~21 hour projection.
+
+- [ ] **Step 5: Delete `results/smoke`** so it cannot be mistaken for real data.
+
+**If any check in Step 2 fails, stop and fix it.** Each is cheap to diagnose now and
+expensive to discover inside 21 hours of output.
 
 ---
+
+### Task 6: Run the full tournament
+
+- [ ] **Step 1: Tag the code first** — `git tag v1-tournament`. A v1-versus-v2 comparison
+      is meaningless if v1 cannot be reproduced, and the improvement phase will change the
+      shared evaluator.
+- [ ] **Step 2: Run the full grid** in the background:
+      `python3 -m experiments.tournament --games all --configs all --trials 20 --out results/raw`.
+      Expect roughly **21 hours**, dominated by Ataxx-easy at ~12 h. It resumes from its own
+      CSV if interrupted, so a sleeping laptop is recoverable.
+- [ ] **Step 3: Run the analysis**, `python3 -m experiments.analyse --raw results/raw | tee results/tables.md`.
+- [ ] **Step 4: Commit** the CSVs and tables.
+
+---
+
+## Schedule this plan sits inside
+
+Roughly 12 days remain.
+
+| Phase | Estimate |
+|---|---|
+| Plan 3 code (tasks 1-3) | 0.5-1 day |
+| Calibration pilot (task 4) | 0.5 day, ~1 h compute |
+| **Pipeline smoke test (task 5)** | **5 minutes — do not skip** |
+| Tournament run #1 (task 6) | 1 day, ~21 h compute |
+| Improvements, A/B on subsets | 1-2 days |
+| Tournament run #2 | 1 day, ~21 h |
+| v1 vs v2 comparison | 0.5 day |
+| Report | 2-3 days |
+| **Total** | **~8-9 days, leaving ~3 days of slack** |
+
+Improvements are A/B tested on a **subset** — one game, main config, `T=10`, about an
+hour — and only a change that clearly wins earns the full 21-hour re-run. That buys three
+or four attempts in the time one full re-run would consume.
+
+**Outstanding beyond this plan:** figures for the report; reading Ribeiro and Figueiredo
+in full for related work; merging `plan-refinement` into `main`; and updating the README,
+which still describes the original plan and references a `requirements.txt` that should
+simply state there are no dependencies.
 
 ## What Plan 3 delivers
 
