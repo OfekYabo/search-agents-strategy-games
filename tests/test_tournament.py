@@ -1,0 +1,81 @@
+import os
+import shutil
+import tempfile
+import unittest
+
+from experiments import tournament
+
+
+class PairingTest(unittest.TestCase):
+    def test_twelve_directed_matchups_from_four_agents(self):
+        p = tournament.pairings()
+        self.assertEqual(len(p), 12)
+        self.assertEqual(len(set(p)), 12)
+
+    def test_each_pairing_appears_in_both_seat_orders(self):
+        p = set(tournament.pairings())
+        for a, b in p:
+            self.assertIn((b, a), p, "%s vs %s missing its reverse" % (a, b))
+
+    def test_no_agent_plays_itself(self):
+        for a, b in tournament.pairings():
+            self.assertNotEqual(a, b)
+
+
+class ScheduleTest(unittest.TestCase):
+    def setUp(self):
+        self.schedule = tournament.build_schedule(
+            games=("isolation",), configs=("main",), trials=3)
+
+    def test_covers_every_matchup_and_trial(self):
+        self.assertEqual(len(self.schedule), 12 * 3)
+
+    def test_trials_are_interleaved_not_grouped_by_matchup(self):
+        # Consecutive cells must not repeat the same matchup, so that timing
+        # drift is spread across agents rather than accumulating against one.
+        matchups = [(c.agent_first, c.agent_second) for c in self.schedule]
+        repeats = sum(1 for i in range(1, len(matchups))
+                      if matchups[i] == matchups[i - 1])
+        self.assertEqual(repeats, 0, "schedule is grouped, not interleaved")
+
+    def test_all_trials_of_a_matchup_are_present_exactly_once(self):
+        seen = {}
+        for c in self.schedule:
+            key = (c.agent_first, c.agent_second, c.trial)
+            self.assertNotIn(key, seen)
+            seen[key] = True
+        self.assertEqual(len(seen), 36)
+
+
+class RunTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir)
+
+    def test_runs_a_tiny_grid_and_writes_both_csvs(self):
+        schedule = [c for c in tournament.build_schedule(
+            games=("isolation",), configs=("hard",), trials=1)
+            if "alpha_beta" not in (c.agent_first, c.agent_second)
+            and "mcts" not in (c.agent_first, c.agent_second)]
+        tournament.run(schedule, self.dir, resume=False)
+        self.assertTrue(os.path.exists(os.path.join(self.dir, "games.csv")))
+        self.assertTrue(os.path.exists(os.path.join(self.dir, "moves.csv")))
+
+    def test_resume_skips_already_completed_games(self):
+        schedule = [c for c in tournament.build_schedule(
+            games=("isolation",), configs=("hard",), trials=1)
+            if c.agent_first == "random" and c.agent_second == "heuristic"]
+        tournament.run(schedule, self.dir, resume=False)
+        import csv
+        with open(os.path.join(self.dir, "games.csv")) as h:
+            first = len(list(csv.DictReader(h)))
+        tournament.run(schedule, self.dir, resume=True)
+        with open(os.path.join(self.dir, "games.csv")) as h:
+            second = len(list(csv.DictReader(h)))
+        self.assertEqual(first, second, "resume re-ran completed games")
+
+
+if __name__ == "__main__":
+    unittest.main()

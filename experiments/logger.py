@@ -8,7 +8,7 @@ import os
 from typing import Set
 
 GAME_COLUMNS = [
-    "game_id", "game", "config", "time_budget_s", "max_nodes",
+    "game_id", "game", "config", "time_budget_s", "max_nodes", "max_entries",
     "agent_first", "agent_second", "winner", "plies", "end_reason",
     "seed", "workers",
 ]
@@ -49,6 +49,7 @@ class GameLogger:
             "config": record.config,
             "time_budget_s": record.time_budget_s,
             "max_nodes": record.max_nodes,
+            "max_entries": record.max_entries,
             "agent_first": record.agent_first,
             "agent_second": record.agent_second,
             "winner": record.winner,

@@ -36,6 +36,7 @@ class GameRecord:
     end_reason: str
     seed: int
     workers: int
+    max_entries: int = 0
     moves: List[MoveRecord] = field(default_factory=list)
 
 
@@ -49,8 +50,11 @@ def game_seed(game_name, agent_a, agent_b, config_name, trial):
     return int.from_bytes(digest[:8], "big")
 
 
-def _game_id(game_name, agent_a, agent_b, config_name, trial):
+def game_id(game_name, agent_a, agent_b, config_name, trial):
     # type: (str, str, str, str, int) -> str
+    """Public so the tournament runner calls the exact same id function
+    rather than re-deriving the format - two copies would silently desync
+    and break --resume with no error."""
     return "%s.%s.%s-%s.t%d" % (game_name, config_name, agent_a, agent_b, trial)
 
 
@@ -143,8 +147,8 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
     winner = _winner(game, state, end_reason)
 
     return GameRecord(
-        game_id=_game_id(game.NAME, agent_names[0], agent_names[1],
-                         config["name"], trial),
+        game_id=game_id(game.NAME, agent_names[0], agent_names[1],
+                        config["name"], trial),
         game=game.NAME,
         config=config["name"],
         time_budget_s=config["time_budget_s"],
@@ -156,6 +160,7 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
         end_reason=end_reason,
         seed=seed,
         workers=workers,
+        max_entries=config.get("max_entries", 0),
         moves=moves,
     )
 
