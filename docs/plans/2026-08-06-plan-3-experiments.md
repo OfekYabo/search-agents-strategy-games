@@ -669,6 +669,8 @@ Expected: PASS, 8 tests
 
 **Statistics, per the spec:** report **score rate** `(W + 0.5D)/N` *and* the W/D/L split separately, never "win rate" alone. Run the first-move binomial test on **decisive games only**, reporting how many draws were excluded — a test on 20 decisive games out of 100 is far weaker than the percentage suggests. Exclude `error`-tagged moves and their games from all statistics, reporting both counts separately.
 
+**And report simulations per root move beside every MCTS result.** This is how a reader tells "MCTS lost" from "MCTS never got to search": measurement found it getting 6 simulations per move on UTTT and 0.3 per root move on Ataxx at 0.1 s — fewer than the number of legal moves, so it could not try each candidate once. Both inputs are already logged (`simulations` and `legal_move_count` in `moves.csv`). Use the **mean of per-move ratios**, not the ratio of means, which would flatter MCTS on positions with few legal moves.
+
 - [ ] **Step 1: Write the failing test**
 
 Create `tests/test_analyse.py`:
@@ -889,7 +891,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run tests to verify they pass**
 
 Run: `python3 -m unittest tests.test_analyse -v`
-Expected: PASS, 10 tests
+Expected: PASS, 8 tests (10 after the simulations-per-root addition)
 
 - [ ] **Step 5: Report — do not commit**
 
