@@ -140,7 +140,7 @@ exceed `max_entries = 200,000`. **2 GB is ample; 4 GB is generous.**
 (`logger.py:75-76`). Files are opened in append mode (`:36-37`). A kill at hour 20 loses at
 most the game in flight.
 
-**13. Resume exists and is used by default.** `completed_ids()` (`logger.py:78`) reads back
+**13. Resume exists, is on by default, and is now crash-safe.** `completed_ids()` (`logger.py:78`) reads back
 every `game_id` already in `games.csv`; `run()` skips those (`tournament.py:109`). Disable
 with `--no-resume`. The id comes from **one shared function**, `runner.game_id`
 (`runner.py:53`), called by both the runner and the tournament precisely so the two cannot
@@ -190,6 +190,26 @@ python3 -m unittest discover -s tests # expect 168 passing, ~25 s
 
 No `pip install`, no virtualenv, no environment variables. Output paths are CLI flags.
 
+### Guest-side quiet hours
+
+The runbook's "idle machine" requirement covers the **host**; the guest has its own noise.
+Ubuntu ships timers that will run `apt` mid-decision during a 21-hour run:
+
+```bash
+sudo systemctl disable --now unattended-upgrades apt-daily.timer \
+     apt-daily-upgrade.timer motd-news.timer
+sudo systemctl mask systemd-tmpfiles-clean.timer
+systemctl list-timers --all | head
+```
+
+### Python version
+
+Development was **3.8.10**; Ubuntu 22.04 ships **3.10**. The code targets 3.8 syntax so it
+runs unchanged, and a faster interpreter is **fair to all four agents** — it is not a
+validity problem. But it does mean **more search per budget**, so the calibration numbers
+from the development machine are not comparable to the host's. **Record the interpreter
+version alongside the results**, and re-measure on the host (step 3 below).
+
 ### Before you start the long run
 
 1. **Provision**: 2 dedicated vCPU is enough (the run uses one); 4 GB RAM is generous.
@@ -213,6 +233,47 @@ No `pip install`, no virtualenv, no environment variables. Output paths are CLI 
    Expect 72 rows, **zero** `illegal_move` or `agent_error`, `nodes` populated for
    Alpha-Beta and empty for MCTS with `simulations` the reverse, and per-move `elapsed_s`
    at or under budget.
+
+   > **Check Isolation-hard specifically.** Its 0.02 s budget is the cell most exposed to
+   > virtualization jitter — a hypervisor scheduling quantum of ~1 ms is 5% of that budget
+   > before the algorithm does anything, and Alpha-Beta already measured **+18%** there on
+   > near-bare WSL2. If it degrades badly under Multipass, that cell either moves elsewhere
+   > or the limitation gets recorded. Do not silently accept it:
+   > ```bash
+   > python3 - <<'EOF'
+   > import csv
+   > G={r["game_id"]:(r["game"],float(r["time_budget_s"])) for r in csv.DictReader(open("results/smoke/games.csv"))}
+   > x=[float(m["elapsed_s"])/G[m["game_id"]][1] for m in csv.DictReader(open("results/smoke/moves.csv"))
+   >    if G[m["game_id"]][0]=="isolation" and m["agent"] in ("alpha_beta","mcts")]
+   > print("isolation-hard: mean %.0f%% of budget, max %.0f%%" % (100*sum(x)/len(x), 100*max(x)))
+   > EOF
+   > ```
+
+### Supervising the run
+
+Because resume is crash-safe (Q13), a supervisor is now safe and makes the run self-healing
+across a guest reboot:
+
+```ini
+[Unit]
+Description=Tournament run
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/search-agents-strategy-games
+ExecStart=/usr/bin/python3 -m experiments.tournament --games all --configs all --trials 20 --out results/raw
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Resume is idempotent, so a restart re-reads `games.csv`, drops any orphan move rows from the
+interrupted game, and continues. Take a VM snapshot **before** the calibration gate, so a
+failed gate does not cost the setup.
 
 ### The run
 

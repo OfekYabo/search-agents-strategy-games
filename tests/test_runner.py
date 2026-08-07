@@ -4,10 +4,11 @@ import random
 import shutil
 import tempfile
 import unittest
+from dataclasses import replace
 
 from agents import random_agent
 from experiments import runner
-from experiments.logger import GameLogger
+from experiments.logger import GAME_COLUMNS, MOVE_COLUMNS, GameLogger
 from games import isolation
 from games.base import DRAW, LOSS, WIN
 
@@ -259,6 +260,158 @@ class LoggerTest(unittest.TestCase):
         logger = GameLogger(self.games_path, self.moves_path)
         self.assertIn(record.game_id, logger.completed_ids())
         logger.close()
+
+
+class CrashDurabilityTest(unittest.TestCase):
+    """Pins the crash-durability invariant: a game_id in games.csv implies
+    all of its move rows are already durable, and reopening a GameLogger
+    after a mid-write kill cleans up any orphaned move rows exactly once,
+    without disturbing a clean moves.csv."""
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.games_path = os.path.join(self.dir, "games.csv")
+        self.moves_path = os.path.join(self.dir, "moves.csv")
+
+    def tearDown(self):
+        shutil.rmtree(self.dir)
+
+    def _play(self, seed):
+        return runner.play_game(
+            isolation,
+            (random_agent.choose, random_agent.choose),
+            ("random_a", "random_b"),
+            CONFIG,
+            seed,
+        )
+
+    def _write_games_header_only(self):
+        with open(self.games_path, "w", newline="") as handle:
+            csv.DictWriter(handle, fieldnames=GAME_COLUMNS).writeheader()
+
+    def _write_raw_moves(self, rows):
+        with open(self.moves_path, "w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=MOVE_COLUMNS)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def _move_row(self, game_id, ply):
+        return {
+            "game_id": game_id,
+            "ply": ply,
+            "agent": "random_a",
+            "side": ply % 2,
+            "tag": "search",
+            "elapsed_s": "0.010000",
+            "nodes": 10,
+            "simulations": "",
+            "depth": 1,
+            "move": "m%d" % ply,
+            "legal_move_count": 5,
+        }
+
+    def test_a_game_id_in_games_implies_its_moves_are_durable(self):
+        logger = GameLogger(self.games_path, self.moves_path)
+        record = self._play(seed=7)
+        logger.write(record)
+        logger.close()
+
+        with open(self.moves_path, newline="") as handle:
+            moves = [row for row in csv.DictReader(handle)
+                     if row["game_id"] == record.game_id]
+        self.assertEqual(len(moves), record.plies)
+        self.assertEqual({int(row["ply"]) for row in moves}, set(range(record.plies)))
+
+    def test_orphan_moves_are_dropped_on_reopen(self):
+        self._write_games_header_only()
+        rows = [self._move_row("orphan-game", ply) for ply in range(5)]
+        self._write_raw_moves(rows)
+
+        logger = GameLogger(self.games_path, self.moves_path)
+        try:
+            self.assertEqual(logger.dropped_orphan_moves, 5)
+            with open(self.moves_path, newline="") as handle:
+                remaining = list(csv.DictReader(handle))
+            self.assertEqual(remaining, [])
+        finally:
+            logger.close()
+
+    def test_orphan_moves_are_dropped_when_games_csv_is_entirely_empty(self):
+        # games.csv can be zero bytes (not even a header) on reopen: its
+        # tiny header write can still be sitting unflushed in its own file
+        # object's buffer when a hard kill lands, even though moves.csv's
+        # much bigger buffer already auto-flushed a chunk of orphan rows to
+        # disk. This is exactly the shape of the reported reproduction
+        # (games.csv rows: 0, moves.csv rows: N), so it must self-heal on
+        # the very next open, not just when games.csv already has a header.
+        open(self.games_path, "w").close()
+        rows = [self._move_row("orphan-game", ply) for ply in range(5)]
+        self._write_raw_moves(rows)
+
+        logger = GameLogger(self.games_path, self.moves_path)
+        try:
+            self.assertEqual(logger.dropped_orphan_moves, 5)
+            with open(self.moves_path, newline="") as handle:
+                remaining = list(csv.DictReader(handle))
+            self.assertEqual(remaining, [])
+        finally:
+            logger.close()
+
+    def test_a_clean_run_drops_nothing_and_leaves_the_file_untouched(self):
+        logger = GameLogger(self.games_path, self.moves_path)
+        for seed in (1, 2):
+            logger.write(self._play(seed))
+        logger.close()
+
+        mtime_before = os.path.getmtime(self.moves_path)
+        with open(self.moves_path, "rb") as handle:
+            content_before = handle.read()
+
+        logger = GameLogger(self.games_path, self.moves_path)
+        try:
+            self.assertEqual(logger.dropped_orphan_moves, 0)
+        finally:
+            logger.close()
+
+        with open(self.moves_path, "rb") as handle:
+            content_after = handle.read()
+        self.assertEqual(os.path.getmtime(self.moves_path), mtime_before)
+        self.assertEqual(content_after, content_before)
+
+    def test_completed_ids_skips_a_truncated_final_line(self):
+        logger = GameLogger(self.games_path, self.moves_path)
+        record = self._play(seed=3)
+        logger.write(record)
+        logger.close()
+
+        # Simulate a hard kill mid-write: a partial final line with an
+        # empty game_id field and no trailing newline.
+        with open(self.games_path, "a", newline="") as handle:
+            handle.write("\n,truncated,mid,write")
+
+        logger = GameLogger(self.games_path, self.moves_path)
+        try:
+            self.assertEqual(logger.completed_ids(), {record.game_id})
+        finally:
+            logger.close()
+
+    def test_resume_after_a_mid_write_kill_does_not_duplicate_moves(self):
+        self._write_games_header_only()
+        rows = [self._move_row("resumed-game", ply) for ply in range(5)]
+        self._write_raw_moves(rows)
+
+        logger = GameLogger(self.games_path, self.moves_path)
+        self.assertEqual(logger.dropped_orphan_moves, 5)
+
+        record = replace(self._play(seed=9), game_id="resumed-game")
+        logger.write(record)
+        logger.close()
+
+        with open(self.moves_path, newline="") as handle:
+            moves = list(csv.DictReader(handle))
+        keys = [(row["game_id"], row["ply"]) for row in moves]
+        self.assertEqual(len(keys), len(set(keys)))
+        self.assertEqual(len(moves), record.plies)
 
 
 if __name__ == "__main__":
