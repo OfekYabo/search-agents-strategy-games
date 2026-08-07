@@ -185,8 +185,12 @@ git clone https://github.com/OfekYabo/search-agents-strategy-games.git
 cd search-agents-strategy-games
 git checkout plan-refinement          # all work lives here; main is the baseline only
 python3 --version                     # 3.8+ required; no other dependencies
-python3 -m unittest discover -s tests # expect 168 passing, ~25 s
+python3 -m unittest discover -s tests # expect 176 passing, ~21 s
 ```
+
+> There is no `pytest` in this project and none is installed on the tournament VM.
+> `python3 -m pytest` will fail with "No module named pytest" — that is expected, not a
+> broken environment. The suite is stdlib `unittest`.
 
 No `pip install`, no virtualenv, no environment variables. Output paths are CLI flags.
 
@@ -252,20 +256,29 @@ version alongside the results**, and re-measure on the host (step 3 below).
 ### Supervising the run
 
 Because resume is crash-safe (Q13), a supervisor is now safe and makes the run self-healing
-across a guest reboot:
+across a guest reboot. **This is the unit actually installed on the tournament VM** — see
+"Operations log" below for why it differs from the first draft:
 
 ```ini
 [Unit]
-Description=Tournament run
-After=network.target
+Description=Search-agents tournament v1 (full grid, 2160 games)
+Documentation=file:///home/ubuntu/search-agents-strategy-games/docs/RUNBOOK.md
+After=local-fs.target
+StartLimitIntervalSec=600
+StartLimitBurst=5
 
 [Service]
 Type=simple
 User=ubuntu
+Group=ubuntu
 WorkingDirectory=/home/ubuntu/search-agents-strategy-games
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 -m experiments.tournament --games all --configs all --trials 20 --out results/raw
 Restart=on-failure
 RestartSec=30
+TimeoutStopSec=120
+StandardOutput=append:/home/ubuntu/search-agents-strategy-games/results/tournament.log
+StandardError=append:/home/ubuntu/search-agents-strategy-games/results/tournament.log
 
 [Install]
 WantedBy=multi-user.target
@@ -303,3 +316,122 @@ L3 cache and memory bandwidth, which perturbs the very quantity being measured.
 and **the per-move timing distribution is compared against a sequential run** — if it shifts,
 the parallel results are not comparable and the run must be sequential. Budget on the order
 of an hour to validate that before trusting a parallel run.
+
+---
+
+## Operations log — tournament VM, 2026-08-07
+
+Decisions taken while provisioning the dedicated Multipass VM (`tournament`, 4 vCPU /
+4 GB, Ubuntu 22.04, **Python 3.10.12**), recorded here because several depart from the
+draft above. Host is otherwise idle; all systemd timers disabled except a masked
+`systemd-tmpfiles-clean.timer`.
+
+### Corrections to the text above
+
+| Was | Now | Why |
+|---|---|---|
+| "expect 168 passing" | **176 passing, 20.6 s** | Suite grew; two of the new tests are the MCTS-rollout guards below. |
+| Dev machine Python 3.8.10 | VM runs **3.10.12** | Faster interpreter, fair to all four agents, but calibration numbers are host-specific (see "Python version" above). |
+
+### MCTS rollout parameters — verified, not assumed
+
+`tournament.py:43` pins `MCTS_ROLLOUT = {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10}`.
+Confirmed against `results/calibration.txt:72-94`: `eps1.00 k1 D10` is the **only**
+configuration that scores top on all three games (isolation 1.00, uttt 1.00, ataxx 0.38).
+`eps1.00 k1 D400` ties on the first two but collapses to 0.00 on Ataxx at 1.2 sims/root, so
+the `D10` truncation is load-bearing.
+
+Verified the values reach the constructor rather than being shadowed: `tournament.py:101-102`
+passes `**MCTS_ROLLOUT` as keywords over the guided defaults at `mcts_agent.py:49-50`, and
+`mcts_agent.py:90-91` reads those closure parameters directly. Nothing rebinds them between.
+Proved at runtime by spying on `mcts_agent.make` — captured exactly
+`{'max_nodes': 50000, 'epsilon': 1.0, 'sample_k': 1, 'rollout_depth': 10}` with no
+positional arguments (which would otherwise bind to `exploration`).
+
+**Effect on the measurement** (median simulations per decision, hard config):
+
+| Game | before (defaults) | after | factor | sims per root move |
+|---|---|---|---|---|
+| ataxx | 28 | 262 | 9.4x | 0.6 → **13.7** |
+| isolation | 460 | 843 | 1.8x | 104.2 → **240.9** |
+| uttt | 15 | 570 | **38.0x** | 2.0 → **73.5** |
+
+Ataxx MCTS is still below one simulation per candidate at hard (13.7 against mean branching
+~51). Finding #1 stands — this is a real result about MCTS on high-branching games, not a
+configuration error — but report the **post-fix** number, not the 0.6.
+
+### Overshoot after the rollout change — no regression
+
+Two full smoke runs (`results/smoke2`, `results/smoke3`; all games, hard, 2 trials).
+The first showed alarming maxima (ataxx/mcts +22.6%, isolation/mcts +12.8%, uttt/mcts
++11.3%). **These are host jitter, not the rollout change:**
+
+1. They did not reproduce — smoke3's worst move across all 1176 budgeted decisions is +7.3%,
+   everything else ≤ +3.4%, and the outliers landed on entirely different plies.
+2. p99 is ≤ 101% for every MCTS cell in both runs, and the mean is 100.1-100.2% — identical
+   to the pre-fix smoke (100.1 / 100.3 / 100.5).
+3. Anti-correlated with the obvious mechanism: the worst outlier was ataxx/mcts at **ply 3
+   with 139 simulations** — a tiny tree. Cost growth from larger trees would appear at late
+   plies, not early ones.
+
+Both smoke runs: 72 games, 0 `illegal_move`, 0 `agent_error`, 0 orphan move rows, 0
+duplicate `(game_id, ply)`, and column discipline intact (`nodes` for Alpha-Beta only,
+`simulations` for MCTS only).
+
+> Both smoke runs executed **with VS Code and an active agent session running on the VM**.
+> Steady-state that costs ~3% CPU aggregate, but the extension host bursts, and on
+> isolation-hard a 4 ms spike is 20% of the 0.02 s budget. Close VS Code before the real run.
+
+### Mid-write kill test — the gate for `Restart=on-failure`
+
+Passed, but note that the **single-kill version of this test is close to worthless**. Move
+rows are written and flushed *before* the games row, which acts as the commit marker
+(`logger.py:104-113`), so orphans only exist in a narrow window between the two flushes. A
+single kill usually misses it and reports a clean `dupes: 0` without ever executing
+`_drop_orphan_moves`. That is exactly what happened on the first attempt here.
+
+Three tests were run; all three must pass before trusting a supervisor:
+
+1. **Prescribed test** — kill -9 at 25 s, then resume. Result: 24/24 games, `dupes: 0`,
+   0 orphans. But 0 orphans existed at kill time, so the fix was never exercised.
+2. **Forced orphan path** — dropped the last games row while keeping its 28 move rows, and
+   appended a truncated final line to mimic a kill mid-`write`. Resume dropped all 29 rows,
+   replayed the game, and produced `dupes: 0`, 0 orphans, 24/24 games, with the replayed
+   game internally consistent (12 plies / 12 move rows / `end_reason=eliminated`).
+3. **Restart loop** — nine consecutive SIGKILLs at 4, 9, 6, 13, 7, 11, 5, 17, 8 s, each
+   followed by resume. Progress monotonic across every restart; final state `dupes: 0`,
+   0 duplicate games rows, 0 orphans, 24/24 games, and `games.plies == count(move rows)` for
+   every game.
+
+Test 3 is the one that licenses `Restart=on-failure`, because it is what the supervisor
+actually does.
+
+### Unit file — what changed from the draft and why
+
+| Change | Reason |
+|---|---|
+| `After=local-fs.target` (was `network.target`) | The run needs no network. Waiting on it only adds a boot-time failure mode. |
+| `Environment=PYTHONUNBUFFERED=1` | `tournament.py:136-138` flushes its progress lines but not the header/footer. Without this the log can read stale during monitoring. |
+| `StandardOutput/Error=append:results/tournament.log` | A real file that survives reboot, so monitoring never depends on journald retention. Needs systemd ≥ 240; VM has 249. |
+| `TimeoutStopSec=120` | Bounded clean stop. |
+| **`StartLimitIntervalSec=600` + `StartLimitBurst=5`** | See below. |
+
+**`StartLimitBurst=5` — the one real judgement call.** Resume makes an ordinary restart
+productive, so a transient crash self-heals. But a *deterministic* crash on one specific game
+would restart forever making zero progress, and the operator is expected to be away for the
+whole run. With this limit, five crashes inside ten minutes stop the unit and leave the
+evidence in place instead of burning hours in a silent loop.
+
+The trade-off is real and was accepted deliberately: if the limit trips at hour 2, the run
+sits idle until someone returns. Removing the limit means it instead *spins* uselessly for
+those same hours — the same wall-clock lost, but a much harder state to diagnose. A stopped
+unit with `Result=start-limit-hit` is unambiguous. Clear it with:
+
+```bash
+sudo systemctl reset-failed tournament && sudo systemctl start tournament
+```
+
+**Deliberately NOT set: `Nice=`, `CPUSchedulingPolicy=`, `CPUAffinity=`.** Raising priority
+is tempting for timing purity, but calibration and both smoke runs ran at default priority.
+Changing scheduling now would make the tournament's timings incomparable to the calibration
+that selected its hyperparameters — a methodological change disguised as an ops tweak.

@@ -4,4 +4,10 @@ __pycache__/
 
 # Editor and agent tooling state, not project content
 .claude/
+
+# Run output. calibration.txt and branching.txt are kept deliberately.
 results/smoke/
+results/smoke2/
+results/smoke3/
+results/raw/
+results/tournament.log
