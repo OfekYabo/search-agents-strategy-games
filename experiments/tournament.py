@@ -25,6 +25,23 @@ AGENTS = ("random", "heuristic", "alpha_beta", "mcts")
 # numbers calibrated to comparable byte footprints - never one shared value.
 CAPS = {"max_entries": 200000, "max_nodes": 50000}
 
+# MCTS rollout parameters, selected by calibrate.py phase 3 rather than assumed.
+# Only the exploration constant has a principled derivation; these three are
+# domain-tuned hyperparameters everywhere in the literature.
+#
+# epsilon=1.0 with sample_k=1 means PURE RANDOM rollouts - no evaluator call
+# inside the playout at all. That is a measured result, not an oversight, and it
+# inverts the reasoning in PLAN.md that motivated heuristic guidance. Guided
+# rollouts cost up to k*D child evaluations each, which starved the tree: at the
+# defaults MCTS got 6 simulations per move on UTTT, fewer than its legal moves,
+# so it could not try each candidate once. Phase 3 scored this configuration
+# best on all three games - 1.00 on Isolation, 1.00 on UTTT, 0.38 on Ataxx -
+# against 0.29 for the guided default on UTTT.
+#
+# These MUST be passed explicitly. mcts_agent.make defaults to the guided
+# configuration, so omitting them silently runs the worst config phase 3 found.
+MCTS_ROLLOUT = {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10}
+
 
 @dataclass(frozen=True)
 class Cell:
@@ -81,7 +98,8 @@ def _make_agent(name, ev):
         return alpha_beta_agent.make(ev.evaluate,
                                      max_entries=CAPS["max_entries"])
     if name == "mcts":
-        return mcts_agent.make(ev.evaluate, max_nodes=CAPS["max_nodes"])
+        return mcts_agent.make(ev.evaluate, max_nodes=CAPS["max_nodes"],
+                               **MCTS_ROLLOUT)
     raise ValueError("unknown agent %r" % (name,))
 
 

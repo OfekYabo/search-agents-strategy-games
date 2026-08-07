@@ -79,3 +79,36 @@ class RunTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CalibratedParameterTest(unittest.TestCase):
+    """The tournament must use the parameters calibration selected.
+
+    mcts_agent.make defaults to the guided rollout configuration, which phase 3
+    ranked worst on every game. Omitting the explicit parameters would silently
+    run a handicapped MCTS and the study would measure the wrong thing.
+    """
+
+    def test_mcts_rollout_parameters_are_the_calibrated_ones(self):
+        self.assertEqual(tournament.MCTS_ROLLOUT,
+                         {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10})
+
+    def test_the_mcts_agent_is_built_with_them_not_with_make_defaults(self):
+        import agents.mcts_agent as m
+        seen = {}
+        original = m.make
+
+        def spy(evaluate, **kwargs):
+            seen.update(kwargs)
+            return original(evaluate, **kwargs)
+
+        m.make = spy
+        try:
+            from evaluation import isolation_eval
+            tournament._make_agent("mcts", isolation_eval)
+        finally:
+            m.make = original
+        for key, value in tournament.MCTS_ROLLOUT.items():
+            self.assertEqual(seen.get(key), value,
+                             "%s was not passed through to mcts_agent.make" % key)
+        self.assertEqual(seen.get("max_nodes"), tournament.CAPS["max_nodes"])
