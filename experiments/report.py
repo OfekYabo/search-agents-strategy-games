@@ -65,3 +65,47 @@ def commentary_for(sections, section_id):
     if not body:
         return "> **[COMMENTARY NEEDED: %s]**" % section_id
     return body
+
+
+def pool_head_to_head(document):
+    # type: (dict) -> dict
+    """Pool head-to-head records across configs, keyed (game, agent, opponent).
+
+    Sums wins/draws/losses and recomputes the score. NOT the mean of the three
+    config scores: those are different numbers whenever the cells differ in
+    size or in variance, and the summed record is the one with a defensible
+    confidence interval.
+    """
+    pooled = {}
+    for row in document["head_to_head"]:
+        key = (row["game"], row["agent"], row["opponent"])
+        acc = pooled.setdefault(key, {"wins": 0, "draws": 0, "losses": 0})
+        acc["wins"] += row["wins"]
+        acc["draws"] += row["draws"]
+        acc["losses"] += row["losses"]
+    for entry in pooled.values():
+        total = entry["wins"] + entry["draws"] + entry["losses"]
+        entry["games"] = total
+        entry["score"] = ((entry["wins"] + 0.5 * entry["draws"]) / total
+                          if total else 0.0)
+    return pooled
+
+
+def vs_random(document):
+    # type: (dict) -> list
+    """Every agent's pooled record against the random agent.
+
+    A one-ply evaluator should crush a random opponent. On Isolation the
+    heuristic scores only 0.750 against it, against 0.963 on UTTT - and
+    Isolation is the designated control game, so a weak control belongs in
+    instrument validation where it cannot hide behind an average.
+    """
+    pooled = pool_head_to_head(document)
+    rows = []
+    for (game, agent, opponent), entry in sorted(pooled.items()):
+        if opponent != "random" or agent == "random":
+            continue
+        row = {"game": game, "agent": agent}
+        row.update(entry)
+        rows.append(row)
+    return rows
