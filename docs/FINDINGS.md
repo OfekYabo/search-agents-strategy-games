@@ -16,12 +16,23 @@ Two kinds of entry:
 ### F1. Width, not state-space size, is what defeats search
 
 Ataxx is the **middle** game by state space (10^23, against Isolation's 10^10 and UTTT's
-10^39) and is **the hardest for both paradigms**. Alpha-Beta reaches only depth 2–4 even at
-a 5 s budget; MCTS needs ~5 s to pass 10 simulations per root move.
+10^39) and is **the hardest for both paradigms**. Confirmed by the v1 run: Alpha-Beta's
+median depth on Ataxx is **3–4** across all three budgets (max 9), against 5–7 on Isolation
+and 5–7 on UTTT.
 
 The cause is branching factor: Ataxx averages 50.9 with a mid-game peak of 76, against ~6
 and ~9 for the other two. This is the clearest vindication of reporting branching factor and
 state-space size as **separate axes** — the two orderings genuinely disagree.
+
+> **Two corrections from the v1 run.** The original version of this entry added "MCTS needs
+> ~5 s to pass 10 simulations per root move." That was measured with the guided rollout
+> defaults and is false — with the calibrated parameters MCTS clears the floor at **0.1 s**.
+> See F3.
+>
+> Also, 50.9 and the peak of 76 come from **random self-play**, which runs 182.6 plies and
+> reaches board states agent games never see. In the run, MCTS's own Ataxx decisions faced a
+> mean of **23–25** legal moves. Both numbers are real; do not put the random-play branching
+> figure beside a tournament result as though it were the width the agents actually faced.
 
 ### F2. Rollout guidance can cost more than it buys, and did
 
@@ -46,32 +57,82 @@ the agent more thoroughly than having no guidance at all.**
 Only visible because simulations-per-move was measured. A results table showing MCTS losing
 would have looked entirely plausible.
 
-### F3. MCTS is starved on high-branching games at any affordable budget
+### F3. MCTS is *beaten* on high-branching games, not starved
 
-On Ataxx, MCTS scores **0.00 against the one-ply heuristic** at every rollout configuration
-tried, while still beating random 0.95 — starved, not broken. It needs ~5 s to reach
-viability, and one 5 s Ataxx config costs ~30 h of compute.
+> **This entry replaces "MCTS is starved on high-branching games at any affordable budget."**
+> That version was measured with the guided rollout defaults and before the
+> simulations-per-root-move statistic was corrected (D9). Both halves of it were wrong. The
+> superseded claim is kept visible here because the way it failed is itself the finding.
 
-Reported rather than engineered around. **That MCTS cannot convert a realistic budget into
-meaningful search on a high-branching game is an answer to the research question.**
+**It is not starved.** With the calibrated rollout parameters, Ataxx MCTS gets a median of
+**23.5 / 90.3 / 347.6** simulations per root move at 0.1 / 0.5 / 2.0 s, and **no decision in
+the entire 2160-game run fell below 1 per root move**. Only Ataxx-hard is thin, and only in
+its lower tail: p5 = 3.9, with 20.1% of decisions below the viability floor of 10.
+
+**And it still loses.** Head-to-head against the one-ply heuristic, both seat orders,
+40 games per cell:
+
+| budget | W–D–L | score | 95% CI |
+|---|---|---|---|
+| 0.1 s | 2–0–38 | **0.050** | [0.000, 0.118] |
+| 0.5 s | 7–0–33 | **0.175** | [0.057, 0.293] |
+| 2.0 s | 18–0–22 | **0.450** | [0.296, 0.604] |
+
+Against Alpha-Beta it scores **0.000** at every budget (0–0–40, three times); against the
+random agent, **1.000**. Not broken — beaten.
+
+Two things the starvation reading hid:
+
+1. **Clearing the viability floor is not sufficiency.** Ataxx at 0.5 s is "ample" by the
+   spec's `>= 30` threshold and still scores 0.175. The floor buys the ability to try each
+   candidate once; it does not buy competitive play at width 25–30.
+2. **The budget response is steep and monotone** — 0.050 → 0.175 → 0.450 across a 20x budget
+   increase, reaching statistical parity with the heuristic at 2.0 s. Budget still binds hard
+   at 0.1 s even where the sims-per-root figure looks respectable.
+
+So the defensible claim is not "MCTS cannot convert a realistic budget into meaningful search
+on a high-branching game." It is: **MCTS converts budget into search efficiently on Ataxx and
+converts search into strength very inefficiently there** — it needs on the order of 350
+simulations per root move to match a one-ply evaluator that examines every move exactly once.
+That is a statement about the algorithm, which is what the research question asked for, and a
+stronger result than the one it replaces.
+
+> **How the wrong version survived so long.** The pilot's error was configuration, not
+> measurement: guided rollouts at `k=8, D=40` starved the tree (F2), and the starvation was
+> then attributed to Ataxx's branching factor rather than to the rollout policy. The
+> corrected statistic (D9) then inflated the replacement figures by 4–8x, which nearly let a
+> second wrong number through in the opposite direction. **The same observation — "MCTS loses
+> on Ataxx" — was consistent with three different underlying stories**, and only measuring
+> simulations per root move *correctly* distinguished them.
 
 ### F4. Isolation is saturated and is a control, not a degradation datapoint
 
 Alpha-Beta *solves* mid-game Isolation positions at depth 5 in 508 nodes **regardless of
-budget** — 0.02 s and 5 s give identical results. MCTS exceeds 1000 simulations per root move
-even at the tightest budget. Neither agent is budget-limited, so Isolation measures something
+budget** — 0.02 s and 5 s give identical results. MCTS is nowhere near the viability floor
+either: in the run its median is **258.6** simulations per root move at the tightest 0.02 s
+budget (minimum 25.1), rising to 11,705.6 at 0.5 s, with **0.0%** of decisions below the
+floor at any budget. Neither agent is budget-limited, so Isolation measures something
 different from the other two games and should be presented that way.
+
+> The original entry said "exceeds 1000 simulations per root move even at the tightest
+> budget." That figure came from the inflated statistic corrected in D9; the true median at
+> 0.02 s is 258.6. The conclusion is unaffected — 258.6 is 26x the floor — but quote the
+> corrected number.
 
 ### F5. Random self-play and agent play give very different game lengths
 
-| Game | Random self-play | Real agent play |
+| Game | Random self-play | Real agent play (v1 run, 720 games each) |
 |---|---|---|
-| Isolation | 15.9 plies | 14.6 |
-| UTTT | 59.5 | 42.2 |
-| **Ataxx** | **182.6** | **45.0** |
+| Isolation | 15.9 plies | **13.7** |
+| UTTT | 59.5 | **38.8** |
+| **Ataxx** | **182.6** | **39.0** |
 
 Competent agents convert and eliminate; random agents shuffle with unproductive jumps that
-never fill the board. On Ataxx, 17 of 24 agent games ended by **elimination**.
+never fill the board. Ataxx is the extreme case: agent play is **4.7x shorter** than random
+self-play.
+
+> The agent-play column originally held 14.6 / 42.2 / 45.0, measured on the 24-game smoke
+> test. The figures above are from the full 2160-game run and supersede them.
 
 **Consequence:** a runtime estimate built on random-play lengths overestimated the tournament
 by 2.5x (21 h projected, ~8 h measured). Branching-factor measurements from random play are
@@ -215,23 +276,63 @@ The mapping from a side-to-move-relative result onto `first`/`second` was correc
 assertion touching it would have passed against an inverted implementation. An inverted
 `_winner` reverses **every win rate in the study** while producing a well-formed CSV.
 
+### D9. The viability statistic was averaged the wrong way, and the spec said to do it
+
+`analyse.py` reported simulations per root move as the **mean of each decision's
+`simulations / legal_move_count` ratio**. A position with a single legal move contributes a
+ratio equal to the entire simulation count — tens of thousands — despite involving no search
+decision at all. **10–14% of Ataxx MCTS decisions and 20–25% of Isolation ones have exactly
+one legal move**, so the reported figure was dominated by positions where nothing was
+chosen. Inflation: **4–8x**.
+
+It moved Ataxx-hard from `viable` to `ample`, and it is the number the spec requires beside
+**every** MCTS result — the one figure that distinguishes "MCTS lost" from "MCTS never got
+to search". It would have been quoted throughout the report.
+
+Two things make this the most instructive defect in the list:
+
+- **The specification asserted the error explicitly, with a justification that was exactly
+  backwards.** `docs/plans/2026-08-06-plan-3-experiments.md` said: *"Use the mean of per-move
+  ratios, not the ratio of means, which would flatter MCTS on positions with few legal
+  moves."* The mean of ratios does not protect against low-width positions; it is
+  **dominated** by them. The code implemented the instruction faithfully, and a unit test
+  pinned the wrong behaviour with a comment explaining why it was right.
+- **It produced a table that was internally consistent and superficially reasonable.** Every
+  cell read `ample`. Nothing was missing, malformed, or out of range.
+
+Now the median of the per-decision ratio, with `p5` and the percentage of decisions below the
+viability floor reported beside it — because the floor is a property of each decision, not of
+the average. Ataxx-hard's 20.1%-below-floor was invisible under any single-number summary.
+
 ---
 
 ## The pattern
 
-Of the eight defects above, **all eight originated in specifications rather than in
+Of the nine defects above, **all nine originated in specifications rather than in
 implementation** — written top-down before any code existed. Every one was caught by a review
 or a gate, never by the specification's own author.
 
-Three mechanisms did the catching, in ascending order of value:
+Four mechanisms did the catching, in ascending order of value:
 
-1. **Unit tests** — caught the least. They ran agents only on Isolation and missed D2 entirely.
+1. **Unit tests** — caught the least. They ran agents only on Isolation and missed D2
+   entirely, and in D9 a unit test actively *defended* the defect.
 2. **Per-task and whole-branch reviews** — caught D5, D6, D8 by comparing files that each
    looked correct alone.
 3. **End-to-end gates on real data** — caught D1, D2, D3, D4, D7. The 2-minute pipeline smoke
    test found two budget bugs that 164 unit tests had missed.
+4. **Arithmetic sanity-checking of the finished table against independent domain knowledge**
+   — caught D9, and *only* D9. It survived all three mechanisms above.
+
+**D9 is the one that should worry the methodology section most.** It was not caught by any
+automated gate, because no gate existed that could catch it: the output was well-formed,
+in-range, internally consistent, and confirmed by a passing test that encoded the same
+misconception. It was caught by a human reading the published table and noticing that the
+numbers did not square with a branching factor measured elsewhere in the project.
 
 **The lesson for the report's methodology section:** when the deliverable is numbers, tests
 that assert on *code behaviour* are necessary but insufficient. What finds the dangerous
 class of defect is measuring the instrument against an independent oracle — a published
-branching curve, a hand-derived constant, an inverted mutant, a budget stopwatch.
+branching curve, a hand-derived constant, an inverted mutant, a budget stopwatch. And when
+the oracle is a statistic the specification itself defined, **the specification is inside the
+blast radius**: D9 could only be found by checking the reported number against a quantity the
+spec had no hand in producing.
