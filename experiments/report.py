@@ -111,6 +111,36 @@ def vs_random(document):
     return rows
 
 
+# Presentation order, shared with figures.py so a table and the figure beside
+# it never disagree about column order. Anything not listed sorts after.
+_AGENT_ORDER = ("alpha_beta", "mcts", "heuristic", "random")
+
+
+def _agents(document):
+    # type: (dict) -> list
+    present = document["meta"]["agents"]
+    known = [a for a in _AGENT_ORDER if a in present]
+    return known + sorted(a for a in present if a not in _AGENT_ORDER)
+
+
+def _one_row_per_pair(agents):
+    # type: (list) -> Any
+    """Predicate keeping one direction of each unordered pairing.
+
+    A head-to-head record and its mirror carry the same information: the
+    score is the complement and the W-D-L is reversed. In a matrix both
+    directions earn their place, because reading a row is how you scan one
+    agent against the field. In a flat table they are pure duplication - the
+    full per-config listing was 108 rows of which 54 said nothing new.
+    """
+    rank = dict((a, i) for i, a in enumerate(agents))
+    last = len(agents)
+
+    def keep(agent, opponent):
+        return rank.get(agent, last) < rank.get(opponent, last)
+    return keep
+
+
 def _table(headers, rows):
     # type: (list, list) -> str
     out = ["| " + " | ".join(headers) + " |",
@@ -118,6 +148,18 @@ def _table(headers, rows):
     for row in rows:
         out.append("| " + " | ".join(str(c) for c in row) + " |")
     return "\n".join(out)
+
+
+def _plain(value):
+    # type: (Any) -> str
+    """Render a metadata value for a table cell. A nested dict would otherwise
+    arrive as a Python repr, braces and quotes and all, in the middle of a
+    report someone is meant to read."""
+    if isinstance(value, dict):
+        return ", ".join("%s=%s" % (k, value[k]) for k in sorted(value))
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
+    return str(value)
 
 
 def _pct(value):
@@ -131,7 +173,7 @@ def _score(row):
 def render(document, sections, figure_names, run_meta=None):
     # type: (dict, dict, list, dict) -> str
     meta = document["meta"]
-    agents = meta["agents"]
+    agents = _agents(document)
     games = meta["games"]
     figures_present = set(figure_names)
     pooled = pool_head_to_head(document)
@@ -176,7 +218,7 @@ def render(document, sections, figure_names, run_meta=None):
                          "not yet write its own metadata.\n")
         parts.append(_table(
             ["property", "value"],
-            [[key, run_meta[key]] for key in sorted(run_meta)
+            [[key, _plain(run_meta[key])] for key in sorted(run_meta)
              if key != "source"]))
     else:
         parts.append("\n> Run metadata was **not recorded by this run**. "
@@ -200,13 +242,15 @@ def render(document, sections, figure_names, run_meta=None):
         parts.append(_table([""] + agents, rows))
     parts.append(figure("fig-head-to-head.svg", "Head-to-head"))
     parts.append(figure("fig-score-by-agent.svg", "Score by agent"))
-    parts.append("\n**Non-transitivity check** - "
-                 "every agent's pooled score against every other\n")
+    keep = _one_row_per_pair(agents)
+    parts.append("\n**Non-transitivity check** - each pairing once, pooled "
+                 "over budgets. The reverse direction is the complement: "
+                 "score `1 - s`, record reversed.\n")
     parts.append(_table(
         ["game", "agent", "opponent", "score", "W-D-L"],
         [[g, a, o, "%.3f" % e["score"],
           "%d-%d-%d" % (e["wins"], e["draws"], e["losses"])]
-         for (g, a, o), e in sorted(pooled.items())]))
+         for (g, a, o), e in sorted(pooled.items()) if keep(a, o)]))
     parts.append("\n-> Full per-config breakdown: [E1](#e1-full-head-to-head). "
                  "Full score table: [E2](#e2-full-score-table).\n")
     parts.append(slot("results"))
@@ -234,7 +278,10 @@ def render(document, sections, figure_names, run_meta=None):
     parts.append("\n**Alpha-Beta depth reached**\n")
     parts.append(_table(
         ["game", "config", "agent", "median depth", "max depth"],
-        [[r["game"], r["config"], r["agent"], r["median_depth"],
+        # A median is an int for an odd count and a float for an even one, so
+        # the raw values mix "4" and "4.0" down one column. Format, don't
+        # round: the half-step is real and rounding it away would overstate.
+        [[r["game"], r["config"], r["agent"], "%.1f" % r["median_depth"],
           r["max_depth"]] for r in document["search_depth"]]))
     parts.append(figure("fig-sims-per-root.svg", "Simulations per root move"))
     parts.append(slot("search-volume"))
@@ -285,11 +332,14 @@ def render(document, sections, figure_names, run_meta=None):
     # Extras
     parts.append("\n---\n\n## Extras\n")
     parts.append("\n### E1. Full head-to-head\n")
+    parts.append("\nOne row per pairing per config. The reverse direction is "
+                 "the complement and is not listed.\n")
     parts.append(_table(
         ["game", "config", "agent", "opponent", "score", "W-D-L", "games"],
         [[r["game"], r["config"], r["agent"], r["opponent"], _score(r),
           "%d-%d-%d" % (r["wins"], r["draws"], r["losses"]), r["games"]]
-         for r in document["head_to_head"]]))
+         for r in document["head_to_head"]
+         if keep(r["agent"], r["opponent"])]))
     parts.append("\n### E2. Full score table\n")
     parts.append(_table(
         ["game", "config", "agent", "W", "D", "L", "score"],
@@ -342,6 +392,10 @@ def main(argv=None):
     parser.add_argument("--commentary", default="docs/report/commentary.md")
     parser.add_argument("--out", default="results/report.md")
     parser.add_argument("--figures", default="results/figures")
+    # Explicit rather than derived from --analysis. It lives beside the CSVs
+    # it describes, in the raw directory, not beside the analysis output.
+    parser.add_argument("--run-meta", dest="run_meta",
+                        default="results/raw/run_meta.json")
     args = parser.parse_args(argv)
 
     with open(args.analysis) as handle:
@@ -353,8 +407,7 @@ def main(argv=None):
             sections = parse_commentary(handle.read())
     validate_commentary(sections, SECTION_IDS)
 
-    run_meta = load_run_meta(os.path.join(
-        os.path.dirname(args.analysis) or ".", "run_meta.json"))
+    run_meta = load_run_meta(args.run_meta)
 
     from experiments import figures
     written = figures.render_all(document, args.figures)

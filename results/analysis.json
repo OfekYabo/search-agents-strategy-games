@@ -1,0 +1,2888 @@
+{
+  "budget_compliance": [
+    {
+      "agent": "alpha_beta",
+      "config": "easy",
+      "game": "ataxx",
+      "max_ratio": 1.02927,
+      "mean_ratio": 0.920273,
+      "moves": 3167,
+      "p99_ratio": 1.000371
+    },
+    {
+      "agent": "heuristic",
+      "config": "easy",
+      "game": "ataxx",
+      "max_ratio": 0.008565,
+      "mean_ratio": 0.000141,
+      "moves": 3044,
+      "p99_ratio": 0.000382
+    },
+    {
+      "agent": "mcts",
+      "config": "easy",
+      "game": "ataxx",
+      "max_ratio": 1.056453,
+      "mean_ratio": 1.000215,
+      "moves": 3178,
+      "p99_ratio": 1.005329
+    },
+    {
+      "agent": "random",
+      "config": "easy",
+      "game": "ataxx",
+      "max_ratio": 1.5e-05,
+      "mean_ratio": 4e-06,
+      "moves": 630,
+      "p99_ratio": 8e-06
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "hard",
+      "game": "ataxx",
+      "max_ratio": 1.05964,
+      "mean_ratio": 0.930003,
+      "moves": 2449,
+      "p99_ratio": 1.00501
+    },
+    {
+      "agent": "heuristic",
+      "config": "hard",
+      "game": "ataxx",
+      "max_ratio": 0.02035,
+      "mean_ratio": 0.002968,
+      "moves": 2484,
+      "p99_ratio": 0.00977
+    },
+    {
+      "agent": "mcts",
+      "config": "hard",
+      "game": "ataxx",
+      "max_ratio": 1.14221,
+      "mean_ratio": 1.000791,
+      "moves": 2171,
+      "p99_ratio": 1.01755
+    },
+    {
+      "agent": "random",
+      "config": "hard",
+      "game": "ataxx",
+      "max_ratio": 0.00037,
+      "mean_ratio": 0.000107,
+      "moves": 978,
+      "p99_ratio": 0.00024
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "main",
+      "game": "ataxx",
+      "max_ratio": 1.030874,
+      "mean_ratio": 0.92411,
+      "moves": 3024,
+      "p99_ratio": 1.00119
+    },
+    {
+      "agent": "heuristic",
+      "config": "main",
+      "game": "ataxx",
+      "max_ratio": 0.00298,
+      "mean_ratio": 0.000653,
+      "moves": 3127,
+      "p99_ratio": 0.001634
+    },
+    {
+      "agent": "mcts",
+      "config": "main",
+      "game": "ataxx",
+      "max_ratio": 1.063204,
+      "mean_ratio": 1.000209,
+      "moves": 3162,
+      "p99_ratio": 1.000834
+    },
+    {
+      "agent": "random",
+      "config": "main",
+      "game": "ataxx",
+      "max_ratio": 5.8e-05,
+      "mean_ratio": 1.7e-05,
+      "moves": 652,
+      "p99_ratio": 3.6e-05
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "easy",
+      "game": "isolation",
+      "max_ratio": 1.022836,
+      "mean_ratio": 0.341534,
+      "moves": 769,
+      "p99_ratio": 1.001234
+    },
+    {
+      "agent": "heuristic",
+      "config": "easy",
+      "game": "isolation",
+      "max_ratio": 0.000252,
+      "mean_ratio": 5.9e-05,
+      "moves": 871,
+      "p99_ratio": 0.000144
+    },
+    {
+      "agent": "mcts",
+      "config": "easy",
+      "game": "isolation",
+      "max_ratio": 1.035552,
+      "mean_ratio": 1.000217,
+      "moves": 899,
+      "p99_ratio": 1.00229
+    },
+    {
+      "agent": "random",
+      "config": "easy",
+      "game": "isolation",
+      "max_ratio": 3.6e-05,
+      "mean_ratio": 8e-06,
+      "moves": 749,
+      "p99_ratio": 2.6e-05
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "hard",
+      "game": "isolation",
+      "max_ratio": 1.38695,
+      "mean_ratio": 0.528998,
+      "moves": 767,
+      "p99_ratio": 1.04
+    },
+    {
+      "agent": "heuristic",
+      "config": "hard",
+      "game": "isolation",
+      "max_ratio": 0.02355,
+      "mean_ratio": 0.001467,
+      "moves": 868,
+      "p99_ratio": 0.0037
+    },
+    {
+      "agent": "mcts",
+      "config": "hard",
+      "game": "isolation",
+      "max_ratio": 1.1625,
+      "mean_ratio": 1.001008,
+      "moves": 889,
+      "p99_ratio": 1.01355
+    },
+    {
+      "agent": "random",
+      "config": "hard",
+      "game": "isolation",
+      "max_ratio": 0.00175,
+      "mean_ratio": 0.000171,
+      "moves": 745,
+      "p99_ratio": 0.00055
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "main",
+      "game": "isolation",
+      "max_ratio": 1.28339,
+      "mean_ratio": 0.453486,
+      "moves": 785,
+      "p99_ratio": 1.05248
+    },
+    {
+      "agent": "heuristic",
+      "config": "main",
+      "game": "isolation",
+      "max_ratio": 0.00354,
+      "mean_ratio": 0.00031,
+      "moves": 858,
+      "p99_ratio": 0.00075
+    },
+    {
+      "agent": "mcts",
+      "config": "main",
+      "game": "isolation",
+      "max_ratio": 1.1236,
+      "mean_ratio": 1.000695,
+      "moves": 891,
+      "p99_ratio": 1.0151
+    },
+    {
+      "agent": "random",
+      "config": "main",
+      "game": "isolation",
+      "max_ratio": 0.00388,
+      "mean_ratio": 4.7e-05,
+      "moves": 759,
+      "p99_ratio": 0.00013
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "easy",
+      "game": "uttt",
+      "max_ratio": 1.028509,
+      "mean_ratio": 0.903705,
+      "moves": 2502,
+      "p99_ratio": 1.000679
+    },
+    {
+      "agent": "heuristic",
+      "config": "easy",
+      "game": "uttt",
+      "max_ratio": 0.00439,
+      "mean_ratio": 0.00042,
+      "moves": 2131,
+      "p99_ratio": 0.00306
+    },
+    {
+      "agent": "mcts",
+      "config": "easy",
+      "game": "uttt",
+      "max_ratio": 1.015713,
+      "mean_ratio": 1.00007,
+      "moves": 2450,
+      "p99_ratio": 1.000169
+    },
+    {
+      "agent": "random",
+      "config": "easy",
+      "game": "uttt",
+      "max_ratio": 1.3e-05,
+      "mean_ratio": 3e-06,
+      "moves": 2203,
+      "p99_ratio": 8e-06
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "hard",
+      "game": "uttt",
+      "max_ratio": 1.15417,
+      "mean_ratio": 0.931565,
+      "moves": 2497,
+      "p99_ratio": 1.01181
+    },
+    {
+      "agent": "heuristic",
+      "config": "hard",
+      "game": "uttt",
+      "max_ratio": 0.08025,
+      "mean_ratio": 0.007975,
+      "moves": 2245,
+      "p99_ratio": 0.06048
+    },
+    {
+      "agent": "mcts",
+      "config": "hard",
+      "game": "uttt",
+      "max_ratio": 1.1061,
+      "mean_ratio": 1.000889,
+      "moves": 2379,
+      "p99_ratio": 1.00284
+    },
+    {
+      "agent": "random",
+      "config": "hard",
+      "game": "uttt",
+      "max_ratio": 0.00027,
+      "mean_ratio": 5.1e-05,
+      "moves": 2292,
+      "p99_ratio": 0.00015
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "main",
+      "game": "uttt",
+      "max_ratio": 1.030402,
+      "mean_ratio": 0.914031,
+      "moves": 2480,
+      "p99_ratio": 1.002612
+    },
+    {
+      "agent": "heuristic",
+      "config": "main",
+      "game": "uttt",
+      "max_ratio": 0.022852,
+      "mean_ratio": 0.00169,
+      "moves": 2168,
+      "p99_ratio": 0.012446
+    },
+    {
+      "agent": "mcts",
+      "config": "main",
+      "game": "uttt",
+      "max_ratio": 1.040224,
+      "mean_ratio": 1.000244,
+      "moves": 2408,
+      "p99_ratio": 1.001206
+    },
+    {
+      "agent": "random",
+      "config": "main",
+      "game": "uttt",
+      "max_ratio": 0.000106,
+      "mean_ratio": 1.1e-05,
+      "moves": 2202,
+      "p99_ratio": 3.4e-05
+    }
+  ],
+  "budget_response": [
+    {
+      "agent": "alpha_beta",
+      "game": "ataxx",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.998527,
+          "ci_low": 0.954303,
+          "config": "hard",
+          "games": 120,
+          "score": 0.991667
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.995418,
+          "ci_low": 0.941263,
+          "config": "main",
+          "games": 120,
+          "score": 0.983333
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 1.0,
+          "ci_low": 0.96898,
+          "config": "easy",
+          "games": 120,
+          "score": 1.0
+        }
+      ]
+    },
+    {
+      "agent": "heuristic",
+      "game": "ataxx",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.737097,
+          "ci_low": 0.569747,
+          "config": "hard",
+          "games": 120,
+          "score": 0.658333
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.706477,
+          "ci_low": 0.535768,
+          "config": "main",
+          "games": 120,
+          "score": 0.625
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.604165,
+          "ci_low": 0.428134,
+          "config": "easy",
+          "games": 120,
+          "score": 0.516667
+        }
+      ]
+    },
+    {
+      "agent": "mcts",
+      "game": "ataxx",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.438788,
+          "ci_low": 0.270518,
+          "config": "hard",
+          "games": 120,
+          "score": 0.35
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.481064,
+          "ci_low": 0.308991,
+          "config": "main",
+          "games": 120,
+          "score": 0.391667
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.571866,
+          "ci_low": 0.395835,
+          "config": "easy",
+          "games": 120,
+          "score": 0.483333
+        }
+      ]
+    },
+    {
+      "agent": "random",
+      "game": "ataxx",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.03102,
+          "ci_low": 0.0,
+          "config": "hard",
+          "games": 120,
+          "score": 0.0
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.03102,
+          "ci_low": 0.0,
+          "config": "main",
+          "games": 120,
+          "score": 0.0
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.03102,
+          "ci_low": 0.0,
+          "config": "easy",
+          "games": 120,
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "agent": "alpha_beta",
+      "game": "isolation",
+      "points": [
+        {
+          "budget_s": 0.02,
+          "ci_high": 0.986963,
+          "ci_low": 0.917418,
+          "config": "hard",
+          "games": 120,
+          "score": 0.966667
+        },
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.941867,
+          "ci_low": 0.833317,
+          "config": "main",
+          "games": 120,
+          "score": 0.9
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.960043,
+          "ci_low": 0.863589,
+          "config": "easy",
+          "games": 120,
+          "score": 0.925
+        }
+      ]
+    },
+    {
+      "agent": "heuristic",
+      "game": "isolation",
+      "points": [
+        {
+          "budget_s": 0.02,
+          "ci_high": 0.4131,
+          "ci_low": 0.247757,
+          "config": "hard",
+          "games": 120,
+          "score": 0.325
+        },
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.360931,
+          "ci_low": 0.203028,
+          "config": "main",
+          "games": 120,
+          "score": 0.275
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.343287,
+          "ci_low": 0.188373,
+          "config": "easy",
+          "games": 120,
+          "score": 0.258333
+        }
+      ]
+    },
+    {
+      "agent": "mcts",
+      "game": "isolation",
+      "points": [
+        {
+          "budget_s": 0.02,
+          "ci_high": 0.729482,
+          "ci_low": 0.561212,
+          "config": "hard",
+          "games": 120,
+          "score": 0.65
+        },
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.804317,
+          "ci_low": 0.647874,
+          "config": "main",
+          "games": 120,
+          "score": 0.733333
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.789595,
+          "ci_low": 0.630296,
+          "config": "easy",
+          "games": 120,
+          "score": 0.716667
+        }
+      ]
+    },
+    {
+      "agent": "random",
+      "game": "isolation",
+      "points": [
+        {
+          "budget_s": 0.02,
+          "ci_high": 0.115527,
+          "ci_low": 0.028541,
+          "config": "hard",
+          "games": 120,
+          "score": 0.058333
+        },
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.15671,
+          "ci_low": 0.051957,
+          "config": "main",
+          "games": 120,
+          "score": 0.091667
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.166683,
+          "ci_low": 0.058133,
+          "config": "easy",
+          "games": 120,
+          "score": 0.1
+        }
+      ]
+    },
+    {
+      "agent": "alpha_beta",
+      "game": "uttt",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.929219,
+          "ci_low": 0.813665,
+          "config": "hard",
+          "games": 120,
+          "score": 0.883333
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.926003,
+          "ci_low": 0.808807,
+          "config": "main",
+          "games": 120,
+          "score": 0.879167
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.932415,
+          "ci_low": 0.818544,
+          "config": "easy",
+          "games": 120,
+          "score": 0.8875
+        }
+      ]
+    },
+    {
+      "agent": "heuristic",
+      "game": "uttt",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.443046,
+          "ci_low": 0.274335,
+          "config": "hard",
+          "games": 120,
+          "score": 0.354167
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.430253,
+          "ci_low": 0.262903,
+          "config": "main",
+          "games": 120,
+          "score": 0.341667
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.408794,
+          "ci_low": 0.243989,
+          "config": "easy",
+          "games": 120,
+          "score": 0.320833
+        }
+      ]
+    },
+    {
+      "agent": "mcts",
+      "game": "uttt",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.818903,
+          "ci_low": 0.665587,
+          "config": "hard",
+          "games": 120,
+          "score": 0.75
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.833345,
+          "ci_low": 0.683444,
+          "config": "main",
+          "games": 120,
+          "score": 0.766667
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.844077,
+          "ci_low": 0.696937,
+          "config": "easy",
+          "games": 120,
+          "score": 0.779167
+        }
+      ]
+    },
+    {
+      "agent": "random",
+      "game": "uttt",
+      "points": [
+        {
+          "budget_s": 0.1,
+          "ci_high": 0.052353,
+          "ci_low": 0.002892,
+          "config": "hard",
+          "games": 120,
+          "score": 0.0125
+        },
+        {
+          "budget_s": 0.5,
+          "ci_high": 0.052353,
+          "ci_low": 0.002892,
+          "config": "main",
+          "games": 120,
+          "score": 0.0125
+        },
+        {
+          "budget_s": 2.0,
+          "ci_high": 0.052353,
+          "ci_low": 0.002892,
+          "config": "easy",
+          "games": 120,
+          "score": 0.0125
+        }
+      ]
+    }
+  ],
+  "first_move_advantage": {
+    "decisive": 2118,
+    "excluded_draws": 42,
+    "first": 1095,
+    "p": 0.122871,
+    "second": 1023
+  },
+  "game_length": [
+    {
+      "config": "easy",
+      "end_reasons": {
+        "board_full": 109,
+        "eliminated": 131
+      },
+      "game": "ataxx",
+      "games": 240,
+      "mean_plies": 41.745833,
+      "median_plies": 19.0
+    },
+    {
+      "config": "hard",
+      "end_reasons": {
+        "board_full": 69,
+        "eliminated": 171
+      },
+      "game": "ataxx",
+      "games": 240,
+      "mean_plies": 33.675,
+      "median_plies": 15.0
+    },
+    {
+      "config": "main",
+      "end_reasons": {
+        "board_full": 105,
+        "eliminated": 135
+      },
+      "game": "ataxx",
+      "games": 240,
+      "mean_plies": 41.520833,
+      "median_plies": 19.0
+    },
+    {
+      "config": "easy",
+      "end_reasons": {
+        "no_moves": 240
+      },
+      "game": "isolation",
+      "games": 240,
+      "mean_plies": 13.7,
+      "median_plies": 14.0
+    },
+    {
+      "config": "hard",
+      "end_reasons": {
+        "no_moves": 240
+      },
+      "game": "isolation",
+      "games": 240,
+      "mean_plies": 13.620833,
+      "median_plies": 13.0
+    },
+    {
+      "config": "main",
+      "end_reasons": {
+        "no_moves": 240
+      },
+      "game": "isolation",
+      "games": 240,
+      "mean_plies": 13.720833,
+      "median_plies": 14.0
+    },
+    {
+      "config": "easy",
+      "end_reasons": {
+        "early_draw": 16,
+        "line": 224
+      },
+      "game": "uttt",
+      "games": 240,
+      "mean_plies": 38.691667,
+      "median_plies": 37.0
+    },
+    {
+      "config": "hard",
+      "end_reasons": {
+        "early_draw": 10,
+        "line": 230
+      },
+      "game": "uttt",
+      "games": 240,
+      "mean_plies": 39.220833,
+      "median_plies": 38.5
+    },
+    {
+      "config": "main",
+      "end_reasons": {
+        "early_draw": 16,
+        "line": 224
+      },
+      "game": "uttt",
+      "games": 240,
+      "mean_plies": 38.575,
+      "median_plies": 38.0
+    }
+  ],
+  "head_to_head": [
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "mcts",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.692949,
+      "ci_low": 0.398288,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 18,
+      "opponent": "mcts",
+      "score": 0.55,
+      "wins": 22
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.601712,
+      "ci_low": 0.307051,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 22,
+      "opponent": "heuristic",
+      "score": 0.45,
+      "wins": 18
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "heuristic",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.995573,
+      "ci_low": 0.871183,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 1,
+      "opponent": "heuristic",
+      "score": 0.975,
+      "wins": 39
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "mcts",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.128817,
+      "ci_low": 0.004427,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 39,
+      "opponent": "alpha_beta",
+      "score": 0.025,
+      "wins": 1
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.98618,
+      "ci_low": 0.834958,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 2,
+      "opponent": "mcts",
+      "score": 0.95,
+      "wins": 38
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.165042,
+      "ci_low": 0.01382,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 38,
+      "opponent": "heuristic",
+      "score": 0.05,
+      "wins": 2
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "heuristic",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.98618,
+      "ci_low": 0.834958,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 2,
+      "opponent": "heuristic",
+      "score": 0.95,
+      "wins": 38
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "mcts",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.165042,
+      "ci_low": 0.01382,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 38,
+      "opponent": "alpha_beta",
+      "score": 0.05,
+      "wins": 2
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.912547,
+      "ci_low": 0.680497,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 7,
+      "opponent": "mcts",
+      "score": 0.825,
+      "wins": 33
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.319503,
+      "ci_low": 0.087453,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 33,
+      "opponent": "heuristic",
+      "score": 0.175,
+      "wins": 7
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "heuristic",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.87684,
+      "ci_low": 0.624966,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 9,
+      "opponent": "mcts",
+      "score": 0.775,
+      "wins": 31
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.198645,
+      "ci_low": 0.025836,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 37,
+      "opponent": "mcts",
+      "score": 0.075,
+      "wins": 3
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.819253,
+      "ci_low": 0.545697,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 12,
+      "opponent": "random",
+      "score": 0.7,
+      "wins": 28
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.375034,
+      "ci_low": 0.12316,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 31,
+      "opponent": "alpha_beta",
+      "score": 0.225,
+      "wins": 9
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.974164,
+      "ci_low": 0.801355,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 3,
+      "opponent": "heuristic",
+      "score": 0.925,
+      "wins": 37
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.454303,
+      "ci_low": 0.180747,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 28,
+      "opponent": "heuristic",
+      "score": 0.3,
+      "wins": 12
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.960421,
+      "ci_low": 0.769479,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 4,
+      "opponent": "mcts",
+      "score": 0.9,
+      "wins": 36
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.290726,
+      "ci_low": 0.070611,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 34,
+      "opponent": "mcts",
+      "score": 0.15,
+      "wins": 6
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.912547,
+      "ci_low": 0.680497,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 7,
+      "opponent": "random",
+      "score": 0.825,
+      "wins": 33
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.230521,
+      "ci_low": 0.039579,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 36,
+      "opponent": "alpha_beta",
+      "score": 0.1,
+      "wins": 4
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.929389,
+      "ci_low": 0.709274,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 6,
+      "opponent": "heuristic",
+      "score": 0.85,
+      "wins": 34
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.319503,
+      "ci_low": 0.087453,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 33,
+      "opponent": "heuristic",
+      "score": 0.175,
+      "wins": 7
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.819253,
+      "ci_low": 0.545697,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 12,
+      "opponent": "mcts",
+      "score": 0.7,
+      "wins": 28
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.230521,
+      "ci_low": 0.039579,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 36,
+      "opponent": "mcts",
+      "score": 0.1,
+      "wins": 4
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.838921,
+      "ci_low": 0.571647,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 11,
+      "opponent": "random",
+      "score": 0.725,
+      "wins": 29
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.454303,
+      "ci_low": 0.180747,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 28,
+      "opponent": "alpha_beta",
+      "score": 0.3,
+      "wins": 12
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.960421,
+      "ci_low": 0.769479,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 4,
+      "opponent": "heuristic",
+      "score": 0.9,
+      "wins": 36
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.428353,
+      "ci_low": 0.161079,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 29,
+      "opponent": "heuristic",
+      "score": 0.275,
+      "wins": 11
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.788956,
+      "ci_low": 0.507566,
+      "config": "easy",
+      "draws": 15,
+      "game": "uttt",
+      "games": 40,
+      "losses": 6,
+      "opponent": "mcts",
+      "score": 0.6625,
+      "wins": 19
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.991292,
+      "ci_low": 0.852655,
+      "config": "easy",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 1,
+      "opponent": "random",
+      "score": 0.9625,
+      "wins": 38
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.492434,
+      "ci_low": 0.211044,
+      "config": "easy",
+      "draws": 15,
+      "game": "uttt",
+      "games": 40,
+      "losses": 19,
+      "opponent": "alpha_beta",
+      "score": 0.3375,
+      "wins": 6
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.147345,
+      "ci_low": 0.008708,
+      "config": "easy",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 38,
+      "opponent": "heuristic",
+      "score": 0.0375,
+      "wins": 1
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.980429,
+      "ci_low": 0.8179,
+      "config": "hard",
+      "draws": 3,
+      "game": "uttt",
+      "games": 40,
+      "losses": 1,
+      "opponent": "heuristic",
+      "score": 0.9375,
+      "wins": 36
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.829143,
+      "ci_low": 0.558617,
+      "config": "hard",
+      "draws": 5,
+      "game": "uttt",
+      "games": 40,
+      "losses": 9,
+      "opponent": "mcts",
+      "score": 0.7125,
+      "wins": 26
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.1821,
+      "ci_low": 0.019571,
+      "config": "hard",
+      "draws": 3,
+      "game": "uttt",
+      "games": 40,
+      "losses": 36,
+      "opponent": "alpha_beta",
+      "score": 0.0625,
+      "wins": 1
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.147345,
+      "ci_low": 0.008708,
+      "config": "hard",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 38,
+      "opponent": "mcts",
+      "score": 0.0375,
+      "wins": 1
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.991292,
+      "ci_low": 0.852655,
+      "config": "hard",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 1,
+      "opponent": "random",
+      "score": 0.9625,
+      "wins": 38
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.441383,
+      "ci_low": 0.170857,
+      "config": "hard",
+      "draws": 5,
+      "game": "uttt",
+      "games": 40,
+      "losses": 26,
+      "opponent": "alpha_beta",
+      "score": 0.2875,
+      "wins": 9
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.991292,
+      "ci_low": 0.852655,
+      "config": "hard",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 1,
+      "opponent": "heuristic",
+      "score": 0.9625,
+      "wins": 38
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "hard",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.147345,
+      "ci_low": 0.008708,
+      "config": "hard",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 38,
+      "opponent": "heuristic",
+      "score": 0.0375,
+      "wins": 1
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.998694,
+      "ci_low": 0.890872,
+      "config": "main",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "heuristic",
+      "score": 0.9875,
+      "wins": 39
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.778657,
+      "ci_low": 0.495056,
+      "config": "main",
+      "draws": 12,
+      "game": "uttt",
+      "games": 40,
+      "losses": 8,
+      "opponent": "mcts",
+      "score": 0.65,
+      "wins": 20
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.109128,
+      "ci_low": 0.001306,
+      "config": "main",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 39,
+      "opponent": "alpha_beta",
+      "score": 0.0125,
+      "wins": 0
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.165042,
+      "ci_low": 0.01382,
+      "config": "main",
+      "draws": 2,
+      "game": "uttt",
+      "games": 40,
+      "losses": 37,
+      "opponent": "mcts",
+      "score": 0.05,
+      "wins": 1
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.991292,
+      "ci_low": 0.852655,
+      "config": "main",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 1,
+      "opponent": "random",
+      "score": 0.9625,
+      "wins": 38
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.504944,
+      "ci_low": 0.221343,
+      "config": "main",
+      "draws": 12,
+      "game": "uttt",
+      "games": 40,
+      "losses": 20,
+      "opponent": "alpha_beta",
+      "score": 0.35,
+      "wins": 8
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.98618,
+      "ci_low": 0.834958,
+      "config": "main",
+      "draws": 2,
+      "game": "uttt",
+      "games": 40,
+      "losses": 1,
+      "opponent": "heuristic",
+      "score": 0.95,
+      "wins": 37
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 1.0,
+      "ci_low": 0.912375,
+      "config": "main",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 0,
+      "opponent": "random",
+      "score": 1.0,
+      "wins": 40
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "alpha_beta",
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.147345,
+      "ci_low": 0.008708,
+      "config": "main",
+      "draws": 1,
+      "game": "uttt",
+      "games": 40,
+      "losses": 38,
+      "opponent": "heuristic",
+      "score": 0.0375,
+      "wins": 1
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.087625,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "uttt",
+      "games": 40,
+      "losses": 40,
+      "opponent": "mcts",
+      "score": 0.0,
+      "wins": 0
+    }
+  ],
+  "meta": {
+    "agents": [
+      "alpha_beta",
+      "heuristic",
+      "mcts",
+      "random"
+    ],
+    "budgets": {
+      "ataxx": {
+        "easy": 2.0,
+        "hard": 0.1,
+        "main": 0.5
+      },
+      "isolation": {
+        "easy": 0.5,
+        "hard": 0.02,
+        "main": 0.1
+      },
+      "uttt": {
+        "easy": 2.0,
+        "hard": 0.1,
+        "main": 0.5
+      }
+    },
+    "configs": [
+      "easy",
+      "hard",
+      "main"
+    ],
+    "games": [
+      "ataxx",
+      "isolation",
+      "uttt"
+    ],
+    "games_total": 2160,
+    "label": "v1-tournament"
+  },
+  "score_table": [
+    {
+      "agent": "alpha_beta",
+      "ci_high": 1.0,
+      "ci_low": 0.96898,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 0,
+      "score": 1.0,
+      "wins": 120
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.604165,
+      "ci_low": 0.428134,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 58,
+      "score": 0.516667,
+      "wins": 62
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.571866,
+      "ci_low": 0.395835,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 62,
+      "score": 0.483333,
+      "wins": 58
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.03102,
+      "ci_low": 0.0,
+      "config": "easy",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 120,
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.998527,
+      "ci_low": 0.954303,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 1,
+      "score": 0.991667,
+      "wins": 119
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.737097,
+      "ci_low": 0.569747,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 41,
+      "score": 0.658333,
+      "wins": 79
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.438788,
+      "ci_low": 0.270518,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 78,
+      "score": 0.35,
+      "wins": 42
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.03102,
+      "ci_low": 0.0,
+      "config": "hard",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 120,
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.995418,
+      "ci_low": 0.941263,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 2,
+      "score": 0.983333,
+      "wins": 118
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.706477,
+      "ci_low": 0.535768,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 45,
+      "score": 0.625,
+      "wins": 75
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.481064,
+      "ci_low": 0.308991,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 73,
+      "score": 0.391667,
+      "wins": 47
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.03102,
+      "ci_low": 0.0,
+      "config": "main",
+      "draws": 0,
+      "game": "ataxx",
+      "games": 120,
+      "losses": 120,
+      "score": 0.0,
+      "wins": 0
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.960043,
+      "ci_low": 0.863589,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 9,
+      "score": 0.925,
+      "wins": 111
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.343287,
+      "ci_low": 0.188373,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 89,
+      "score": 0.258333,
+      "wins": 31
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.789595,
+      "ci_low": 0.630296,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 34,
+      "score": 0.716667,
+      "wins": 86
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.166683,
+      "ci_low": 0.058133,
+      "config": "easy",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 108,
+      "score": 0.1,
+      "wins": 12
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.986963,
+      "ci_low": 0.917418,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 4,
+      "score": 0.966667,
+      "wins": 116
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.4131,
+      "ci_low": 0.247757,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 81,
+      "score": 0.325,
+      "wins": 39
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.729482,
+      "ci_low": 0.561212,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 42,
+      "score": 0.65,
+      "wins": 78
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.115527,
+      "ci_low": 0.028541,
+      "config": "hard",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 113,
+      "score": 0.058333,
+      "wins": 7
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.941867,
+      "ci_low": 0.833317,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 12,
+      "score": 0.9,
+      "wins": 108
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.360931,
+      "ci_low": 0.203028,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 87,
+      "score": 0.275,
+      "wins": 33
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.804317,
+      "ci_low": 0.647874,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 32,
+      "score": 0.733333,
+      "wins": 88
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.15671,
+      "ci_low": 0.051957,
+      "config": "main",
+      "draws": 0,
+      "game": "isolation",
+      "games": 120,
+      "losses": 109,
+      "score": 0.091667,
+      "wins": 11
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.932415,
+      "ci_low": 0.818544,
+      "config": "easy",
+      "draws": 15,
+      "game": "uttt",
+      "games": 120,
+      "losses": 6,
+      "score": 0.8875,
+      "wins": 99
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.408794,
+      "ci_low": 0.243989,
+      "config": "easy",
+      "draws": 1,
+      "game": "uttt",
+      "games": 120,
+      "losses": 81,
+      "score": 0.320833,
+      "wins": 38
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.844077,
+      "ci_low": 0.696937,
+      "config": "easy",
+      "draws": 15,
+      "game": "uttt",
+      "games": 120,
+      "losses": 19,
+      "score": 0.779167,
+      "wins": 86
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.052353,
+      "ci_low": 0.002892,
+      "config": "easy",
+      "draws": 1,
+      "game": "uttt",
+      "games": 120,
+      "losses": 118,
+      "score": 0.0125,
+      "wins": 1
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.929219,
+      "ci_low": 0.813665,
+      "config": "hard",
+      "draws": 8,
+      "game": "uttt",
+      "games": 120,
+      "losses": 10,
+      "score": 0.883333,
+      "wins": 102
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.443046,
+      "ci_low": 0.274335,
+      "config": "hard",
+      "draws": 5,
+      "game": "uttt",
+      "games": 120,
+      "losses": 75,
+      "score": 0.354167,
+      "wins": 40
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.818903,
+      "ci_low": 0.665587,
+      "config": "hard",
+      "draws": 6,
+      "game": "uttt",
+      "games": 120,
+      "losses": 27,
+      "score": 0.75,
+      "wins": 87
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.052353,
+      "ci_low": 0.002892,
+      "config": "hard",
+      "draws": 1,
+      "game": "uttt",
+      "games": 120,
+      "losses": 118,
+      "score": 0.0125,
+      "wins": 1
+    },
+    {
+      "agent": "alpha_beta",
+      "ci_high": 0.926003,
+      "ci_low": 0.808807,
+      "config": "main",
+      "draws": 13,
+      "game": "uttt",
+      "games": 120,
+      "losses": 8,
+      "score": 0.879167,
+      "wins": 99
+    },
+    {
+      "agent": "heuristic",
+      "ci_high": 0.430253,
+      "ci_low": 0.262903,
+      "config": "main",
+      "draws": 4,
+      "game": "uttt",
+      "games": 120,
+      "losses": 77,
+      "score": 0.341667,
+      "wins": 39
+    },
+    {
+      "agent": "mcts",
+      "ci_high": 0.833345,
+      "ci_low": 0.683444,
+      "config": "main",
+      "draws": 14,
+      "game": "uttt",
+      "games": 120,
+      "losses": 21,
+      "score": 0.766667,
+      "wins": 85
+    },
+    {
+      "agent": "random",
+      "ci_high": 0.052353,
+      "ci_low": 0.002892,
+      "config": "main",
+      "draws": 1,
+      "game": "uttt",
+      "games": 120,
+      "losses": 118,
+      "score": 0.0125,
+      "wins": 1
+    }
+  ],
+  "search_depth": [
+    {
+      "agent": "alpha_beta",
+      "config": "easy",
+      "game": "ataxx",
+      "max_depth": 9,
+      "median_depth": 4,
+      "moves": 3167
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "hard",
+      "game": "ataxx",
+      "max_depth": 6,
+      "median_depth": 3,
+      "moves": 2449
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "main",
+      "game": "ataxx",
+      "max_depth": 7,
+      "median_depth": 4.0,
+      "moves": 3024
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "easy",
+      "game": "isolation",
+      "max_depth": 18,
+      "median_depth": 6,
+      "moves": 769
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "hard",
+      "game": "isolation",
+      "max_depth": 14,
+      "median_depth": 5,
+      "moves": 767
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "main",
+      "game": "isolation",
+      "max_depth": 15,
+      "median_depth": 7,
+      "moves": 785
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "easy",
+      "game": "uttt",
+      "max_depth": 64,
+      "median_depth": 7.0,
+      "moves": 2502
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "hard",
+      "game": "uttt",
+      "max_depth": 64,
+      "median_depth": 5,
+      "moves": 2497
+    },
+    {
+      "agent": "alpha_beta",
+      "config": "main",
+      "game": "uttt",
+      "max_depth": 64,
+      "median_depth": 6.0,
+      "moves": 2480
+    }
+  ],
+  "simulations_per_root": [
+    {
+      "agent": "mcts",
+      "config": "easy",
+      "game": "ataxx",
+      "mean_per_root": 6500.283339,
+      "mean_simulations": 17916.807426,
+      "median_per_root": 347.626087,
+      "moves": 3178,
+      "p5_per_root": 122.063492,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "hard",
+      "game": "ataxx",
+      "mean_per_root": 70.751364,
+      "mean_simulations": 410.556886,
+      "median_per_root": 23.461538,
+      "moves": 2171,
+      "p5_per_root": 3.927536,
+      "pct_below_floor": 20.082911,
+      "verdict": "viable"
+    },
+    {
+      "agent": "mcts",
+      "config": "main",
+      "game": "ataxx",
+      "mean_per_root": 1176.235948,
+      "mean_simulations": 3142.129981,
+      "median_per_root": 90.280303,
+      "moves": 3162,
+      "p5_per_root": 36.931818,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "easy",
+      "game": "isolation",
+      "mean_per_root": 42975.625442,
+      "mean_simulations": 92519.863181,
+      "median_per_root": 11705.6,
+      "moves": 899,
+      "p5_per_root": 1183.727273,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "hard",
+      "game": "isolation",
+      "mean_per_root": 1670.146731,
+      "mean_simulations": 3150.310461,
+      "median_per_root": 258.6,
+      "moves": 889,
+      "p5_per_root": 49.090909,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "main",
+      "game": "isolation",
+      "mean_per_root": 8073.266368,
+      "mean_simulations": 16775.955107,
+      "median_per_root": 1612.666667,
+      "moves": 891,
+      "p5_per_root": 245.25,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "easy",
+      "game": "uttt",
+      "mean_per_root": 15012.737039,
+      "mean_simulations": 56875.145306,
+      "median_per_root": 1972.428571,
+      "moves": 2450,
+      "p5_per_root": 450.057143,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "hard",
+      "game": "uttt",
+      "mean_per_root": 404.114773,
+      "mean_simulations": 1621.857503,
+      "median_per_root": 96.625,
+      "moves": 2379,
+      "p5_per_root": 20.540541,
+      "pct_below_floor": 2.522068,
+      "verdict": "ample"
+    },
+    {
+      "agent": "mcts",
+      "config": "main",
+      "game": "uttt",
+      "mean_per_root": 3562.895387,
+      "mean_simulations": 12197.900332,
+      "median_per_root": 485.285714,
+      "moves": 2408,
+      "p5_per_root": 91.275,
+      "pct_below_floor": 0.0,
+      "verdict": "ample"
+    }
+  ],
+  "tag_distribution": [
+    {
+      "agent": "alpha_beta",
+      "count": 1380,
+      "tag": "memory-limited"
+    },
+    {
+      "agent": "alpha_beta",
+      "count": 2822,
+      "tag": "normal"
+    },
+    {
+      "agent": "alpha_beta",
+      "count": 14238,
+      "tag": "time-limited"
+    },
+    {
+      "agent": "heuristic",
+      "count": 17796,
+      "tag": "normal"
+    },
+    {
+      "agent": "mcts",
+      "count": 18427,
+      "tag": "time-limited"
+    },
+    {
+      "agent": "random",
+      "count": 11210,
+      "tag": "normal"
+    }
+  ]
+}

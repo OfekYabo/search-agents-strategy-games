@@ -184,5 +184,81 @@ class RunMetaTest(unittest.TestCase):
                          {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10})
 
 
+class NoMirroredRowsTest(unittest.TestCase):
+    def _document(self):
+        with open(_fixture_path()) as handle:
+            return json.load(handle)
+
+    def test_flat_tables_list_each_pairing_once(self):
+        """A record and its mirror carry the same information: complementary
+        score, reversed W-D-L. They belong in a matrix, where reading a row
+        scans one agent against the field, but in a flat table they are pure
+        duplication."""
+        text = report.render(self._document(), {}, [])
+        extras = text.split("### E1. Full head-to-head")[1]
+        extras = extras.split("### E2.")[0]
+        pairs = set()
+        for line in extras.splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) != 7 or cells[0] in ("game", "---"):
+                continue
+            key = (cells[0], cells[1], tuple(sorted((cells[2], cells[3]))))
+            self.assertNotIn(key, pairs, "mirrored row for %s" % (key,))
+            pairs.add(key)
+        self.assertTrue(pairs)
+
+    def test_the_matrix_still_shows_both_directions(self):
+        # The matrix is the primary view and a half-empty one is harder to
+        # read, so deduplication must not reach it.
+        text = report.render(self._document(), {}, [])
+        results = text.split("## 3. Results")[1].split("## 4.")[0]
+        self.assertIn("| alpha_beta | - |", results)
+        self.assertIn("| random |", results)
+
+
+class MainWiringTest(unittest.TestCase):
+    """render() taking run_meta as an argument was tested; main() finding the
+    file was not, and it looked in the analysis directory rather than beside
+    the CSVs, so the real report said "not recorded" while the file existed."""
+
+    def _run(self, target, run_meta_path):
+        report.main(["--analysis", _fixture_path(),
+                     "--commentary", "/nonexistent-commentary.md",
+                     "--out", os.path.join(target, "report.md"),
+                     "--figures", os.path.join(target, "figures"),
+                     "--run-meta", run_meta_path])
+        with open(os.path.join(target, "report.md")) as handle:
+            return handle.read()
+
+    def test_main_loads_run_meta_from_the_raw_directory(self):
+        target = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, target)
+        path = os.path.join(os.path.dirname(__file__), os.pardir,
+                            "results", "raw", "run_meta.json")
+        text = self._run(target, path)
+        self.assertIn("reconstructed", text)
+        self.assertNotIn("not recorded by this run", text)
+
+    def test_main_falls_back_to_not_recorded_when_absent(self):
+        target = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, target)
+        text = self._run(target, "/nonexistent-run-meta.json")
+        self.assertIn("not recorded by this run", text)
+
+
+class DepthFormattingTest(unittest.TestCase):
+    def test_median_depth_is_formatted_consistently(self):
+        with open(_fixture_path()) as handle:
+            document = json.load(handle)
+        text = report.render(document, {}, [])
+        section = text.split("Alpha-Beta depth reached")[1].split("##")[0]
+        for line in section.splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) != 5 or cells[0] in ("game", "---"):
+                continue
+            self.assertRegex(cells[3], r"^\d+\.\d$",
+                             "median depth %r is not formatted" % cells[3])
+
+
 if __name__ == "__main__":
     unittest.main()
