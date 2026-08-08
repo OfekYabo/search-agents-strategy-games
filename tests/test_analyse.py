@@ -123,9 +123,6 @@ class SimulationsPerRootTest(unittest.TestCase):
         self.assertAlmostEqual(entry["p5_per_root"], 5.0)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class WilsonIntervalTest(unittest.TestCase):
     def test_draws_count_as_half_a_win(self):
@@ -157,3 +154,50 @@ class WilsonIntervalTest(unittest.TestCase):
         r = analyse.wilson_interval(0, 0, 0)
         self.assertEqual(r["games"], 0)
         self.assertEqual(r["score"], 0.0)
+
+
+class HeadToHeadTest(unittest.TestCase):
+    def _rows(self):
+        # Same pairing in both seat orders. "a" wins once from each seat,
+        # and there is one draw.
+        return [
+            {"game": "ataxx", "config": "hard", "agent_first": "a",
+             "agent_second": "b", "winner": "first"},
+            {"game": "ataxx", "config": "hard", "agent_first": "b",
+             "agent_second": "a", "winner": "second"},
+            {"game": "ataxx", "config": "hard", "agent_first": "a",
+             "agent_second": "b", "winner": "draw"},
+        ]
+
+    def test_pools_both_seat_orders(self):
+        t = analyse.head_to_head(self._rows())
+        entry = t[("ataxx", "hard", "a", "b")]
+        self.assertEqual((entry["wins"], entry["draws"], entry["losses"]),
+                         (2, 1, 0))
+
+    def test_is_symmetric_between_the_two_agents(self):
+        t = analyse.head_to_head(self._rows())
+        entry = t[("ataxx", "hard", "b", "a")]
+        self.assertEqual((entry["wins"], entry["draws"], entry["losses"]),
+                         (0, 1, 2))
+
+    def test_scores_are_complementary(self):
+        t = analyse.head_to_head(self._rows())
+        ab = t[("ataxx", "hard", "a", "b")]["score"]
+        ba = t[("ataxx", "hard", "b", "a")]["score"]
+        self.assertAlmostEqual(ab + ba, 1.0)
+
+    def test_carries_a_confidence_interval(self):
+        entry = analyse.head_to_head(self._rows())[("ataxx", "hard", "a", "b")]
+        self.assertIn("ci_low", entry)
+        self.assertLessEqual(entry["ci_low"], entry["score"])
+        self.assertGreaterEqual(entry["ci_high"], entry["score"])
+
+    def test_does_not_pair_an_agent_with_itself(self):
+        rows = [{"game": "uttt", "config": "main", "agent_first": "a",
+                 "agent_second": "a", "winner": "first"}]
+        self.assertNotIn(("uttt", "main", "a", "a"), analyse.head_to_head(rows))
+
+
+if __name__ == "__main__":
+    unittest.main()

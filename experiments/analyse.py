@@ -102,6 +102,36 @@ def score_table(rows):
     return table
 
 
+def head_to_head(rows):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Per (game, config, agent, opponent): record and score, pooled over both
+    seat orders.
+
+    The score_table figure is against the whole four-agent field, which
+    conflates opponents - MCTS's 0.483 on Ataxx-easy averages 1.000 against
+    the random agent with 0.000 against Alpha-Beta. Every claim the project
+    actually makes is a head-to-head claim, so it needs its own table.
+    """
+    table = {}
+    for row in rows:
+        first, second = row["agent_first"], row["agent_second"]
+        if first == second:
+            continue
+        for agent, opponent, seat in ((first, second, "first"),
+                                      (second, first, "second")):
+            key = (row["game"], row["config"], agent, opponent)
+            e = table.setdefault(key, {"wins": 0, "draws": 0, "losses": 0})
+            if row["winner"] == "draw":
+                e["draws"] += 1
+            elif row["winner"] == seat:
+                e["wins"] += 1
+            else:
+                e["losses"] += 1
+    for e in table.values():
+        e.update(wilson_interval(e["wins"], e["draws"], e["losses"]))
+    return table
+
+
 def tag_distribution(moves):
     out = {}
     for m in moves:
