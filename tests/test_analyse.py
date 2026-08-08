@@ -244,5 +244,31 @@ class DepthComplianceLengthTest(unittest.TestCase):
         self.assertEqual(e["end_reasons"]["eliminated"], 2)
 
 
+class BudgetResponseTest(unittest.TestCase):
+    def test_points_are_sorted_by_ascending_budget(self):
+        rows = [
+            {"game": "ataxx", "config": "hard", "agent_first": "a",
+             "agent_second": "b", "winner": "first"},
+            {"game": "ataxx", "config": "easy", "agent_first": "a",
+             "agent_second": "b", "winner": "second"},
+            {"game": "ataxx", "config": "main", "agent_first": "a",
+             "agent_second": "b", "winner": "first"},
+        ]
+        budgets = {"ataxx": {"hard": 0.1, "main": 0.5, "easy": 2.0}}
+        points = analyse.budget_response(rows, budgets)[("ataxx", "a")]
+        self.assertEqual([p["config"] for p in points],
+                         ["hard", "main", "easy"])
+        self.assertEqual([p["budget_s"] for p in points], [0.1, 0.5, 2.0])
+
+    def test_each_point_carries_a_confidence_interval(self):
+        rows = [{"game": "uttt", "config": "main", "agent_first": "a",
+                 "agent_second": "b", "winner": "first"}]
+        points = analyse.budget_response(rows, {"uttt": {"main": 0.5}})
+        point = points[("uttt", "a")][0]
+        self.assertAlmostEqual(point["score"], 1.0)
+        self.assertLessEqual(point["ci_low"], 1.0)
+        self.assertEqual(point["games"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()

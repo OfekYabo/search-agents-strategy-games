@@ -132,6 +132,32 @@ def head_to_head(rows):
     return table
 
 
+def budget_response(rows, budgets):
+    # type: (List[Dict[str, Any]], Dict[str, Dict[str, float]]) -> Dict[Any, List[Dict[str, Any]]]
+    """Per (game, agent): field score as a function of the time budget.
+
+    Field score, not head-to-head, and deliberately: every agent faces the
+    same four-agent pool, so the curves are comparable across agents. The
+    head-to-head equivalent is derivable from head_to_head() by reading the
+    three configs of one (game, agent, opponent) triple, and storing it twice
+    would create two numbers that can disagree.
+    """
+    table = score_table(rows)
+    out = {}
+    for (game, config, agent), entry in table.items():
+        budget = budgets.get(game, {}).get(config)
+        if budget is None:
+            continue
+        point = {"config": config, "budget_s": budget,
+                 "games": entry["games"]}
+        point.update(wilson_interval(entry["wins"], entry["draws"],
+                                     entry["losses"]))
+        out.setdefault((game, agent), []).append(point)
+    for points in out.values():
+        points.sort(key=lambda p: p["budget_s"])
+    return out
+
+
 def tag_distribution(moves):
     out = {}
     for m in moves:
