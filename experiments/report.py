@@ -109,3 +109,270 @@ def vs_random(document):
         row.update(entry)
         rows.append(row)
     return rows
+
+
+def _table(headers, rows):
+    # type: (list, list) -> str
+    out = ["| " + " | ".join(headers) + " |",
+           "|" + "|".join(["---"] * len(headers)) + "|"]
+    for row in rows:
+        out.append("| " + " | ".join(str(c) for c in row) + " |")
+    return "\n".join(out)
+
+
+def _pct(value):
+    return "%.1f%%" % value
+
+
+def _score(row):
+    return "%.3f [%.3f-%.3f]" % (row["score"], row["ci_low"], row["ci_high"])
+
+
+def render(document, sections, figure_names, run_meta=None):
+    # type: (dict, dict, list, dict) -> str
+    meta = document["meta"]
+    agents = meta["agents"]
+    games = meta["games"]
+    figures_present = set(figure_names)
+    pooled = pool_head_to_head(document)
+    run_meta = run_meta or {}
+
+    def figure(name, caption):
+        if name not in figures_present:
+            return ""
+        return "\n![%s](figures/%s)\n" % (caption, name)
+
+    def slot(section_id):
+        return "\n" + commentary_for(sections, section_id) + "\n"
+
+    parts = []
+    parts.append("# Tournament report: %s\n" % (meta["label"] or "unlabelled"))
+
+    # 1. Overview
+    errors = sum(r["count"] for r in document["tag_distribution"]
+                 if r["tag"] in ("error", "illegal_move", "agent_error"))
+    parts.append("## 1. Overview\n")
+    parts.append(_table(
+        ["property", "value"],
+        [["games played", meta["games_total"]],
+         ["games", ", ".join(games)],
+         ["configs", ", ".join(meta["configs"])],
+         ["agents", ", ".join(agents)],
+         ["error moves", errors]]))
+    parts.append(slot("overview"))
+
+    # 2. Method for this run
+    parts.append("## 2. Method for this run\n")
+    parts.append(_table(
+        ["game", "config", "budget (s)"],
+        [[game, config, meta["budgets"][game][config]]
+         for game in games
+         for config in sorted(meta["budgets"][game],
+                              key=lambda c: meta["budgets"][game][c])]))
+    if run_meta:
+        if run_meta.get("source") == "reconstructed":
+            parts.append("\n> These values are **reconstructed**, not "
+                         "recorded by the run itself. The tournament does "
+                         "not yet write its own metadata.\n")
+        parts.append(_table(
+            ["property", "value"],
+            [[key, run_meta[key]] for key in sorted(run_meta)
+             if key != "source"]))
+    else:
+        parts.append("\n> Run metadata was **not recorded by this run**. "
+                     "The MCTS rollout parameters, interpreter version and "
+                     "host are not present in the CSVs; see "
+                     "`experiments/tournament.py` at the run's tag.\n")
+    parts.append(slot("method"))
+
+    # 3. Results
+    parts.append("## 3. Results\n")
+    for game in games:
+        parts.append("\n**%s** - head-to-head, pooled over budgets "
+                     "(row agent vs column opponent)\n" % game)
+        rows = []
+        for me in agents:
+            line = [me]
+            for opponent in agents:
+                entry = pooled.get((game, me, opponent))
+                line.append("-" if entry is None else "%.3f" % entry["score"])
+            rows.append(line)
+        parts.append(_table([""] + agents, rows))
+    parts.append(figure("fig-head-to-head.svg", "Head-to-head"))
+    parts.append(figure("fig-score-by-agent.svg", "Score by agent"))
+    parts.append("\n**Non-transitivity check** - "
+                 "every agent's pooled score against every other\n")
+    parts.append(_table(
+        ["game", "agent", "opponent", "score", "W-D-L"],
+        [[g, a, o, "%.3f" % e["score"],
+          "%d-%d-%d" % (e["wins"], e["draws"], e["losses"])]
+         for (g, a, o), e in sorted(pooled.items())]))
+    parts.append("\n-> Full per-config breakdown: [E1](#e1-full-head-to-head). "
+                 "Full score table: [E2](#e2-full-score-table).\n")
+    parts.append(slot("results"))
+
+    # 4. Budget response
+    parts.append("## 4. Budget response\n")
+    for row in document["budget_response"]:
+        parts.append("\n**%s / %s**\n" % (row["game"], row["agent"]))
+        parts.append(_table(
+            ["budget (s)", "config", "score", "games"],
+            [[p["budget_s"], p["config"], _score(p), p["games"]]
+             for p in row["points"]]))
+    parts.append(figure("fig-budget-response.svg", "Budget response"))
+    parts.append(slot("budget-response"))
+
+    # 5. Search volume and viability
+    parts.append("## 5. Search volume and viability\n")
+    parts.append(_table(
+        ["game", "config", "agent", "mean sims", "median /root", "p5 /root",
+         "% below floor", "verdict"],
+        [[r["game"], r["config"], r["agent"], "%.1f" % r["mean_simulations"],
+          "%.1f" % r["median_per_root"], "%.1f" % r["p5_per_root"],
+          _pct(r["pct_below_floor"]), r["verdict"]]
+         for r in document["simulations_per_root"]]))
+    parts.append("\n**Alpha-Beta depth reached**\n")
+    parts.append(_table(
+        ["game", "config", "agent", "median depth", "max depth"],
+        [[r["game"], r["config"], r["agent"], r["median_depth"],
+          r["max_depth"]] for r in document["search_depth"]]))
+    parts.append(figure("fig-sims-per-root.svg", "Simulations per root move"))
+    parts.append(slot("search-volume"))
+
+    # 6. Instrument validation
+    parts.append("## 6. Instrument validation\n")
+    parts.append("\n**Budget compliance** (elapsed / budget)\n")
+    parts.append(_table(
+        ["game", "config", "agent", "mean", "p99", "max", "moves"],
+        [[r["game"], r["config"], r["agent"], _pct(100 * r["mean_ratio"]),
+          _pct(100 * r["p99_ratio"]), _pct(100 * r["max_ratio"]), r["moves"]]
+         for r in document["budget_compliance"]]))
+    parts.append("\n**Every agent against the random agent** - a one-ply "
+                 "evaluator should dominate here; a weak control game shows "
+                 "up as a low score\n")
+    parts.append(_table(
+        ["game", "agent", "score", "W-D-L"],
+        [[r["game"], r["agent"], "%.3f" % r["score"],
+          "%d-%d-%d" % (r["wins"], r["draws"], r["losses"])]
+         for r in vs_random(document)]))
+    fma = document["first_move_advantage"]
+    parts.append("\n**First-move advantage** (decisive games only): "
+                 "first %d, second %d, decisive %d, draws excluded %d, "
+                 "p = %.4f\n" % (fma["first"], fma["second"], fma["decisive"],
+                                 fma["excluded_draws"], fma["p"]))
+    parts.append("\n-> Move-tag distribution: "
+                 "[E3](#e3-move-tag-distribution).\n")
+    parts.append(slot("instrument-validation"))
+
+    # 7. Game characteristics
+    parts.append("## 7. Game characteristics\n")
+    parts.append(_table(
+        ["game", "config", "mean plies", "median plies", "games"],
+        [[r["game"], r["config"], "%.1f" % r["mean_plies"],
+          r["median_plies"], r["games"]] for r in document["game_length"]]))
+    parts.append("\n-> End-reason breakdown: [E4](#e4-end-reasons).\n")
+    parts.append(slot("game-characteristics"))
+
+    # 8. Limitations
+    parts.append("## 8. Limitations\n")
+    parts.append("\nScores are Wilson 95%% intervals. With %d games in the "
+                 "smallest head-to-head cell, differences below roughly 0.15 "
+                 "are not resolvable. A wall-clock budget makes the run one "
+                 "sample rather than a replayable artifact.\n"
+                 % min([e["games"] for e in pooled.values()] or [0]))
+    parts.append(slot("limitations"))
+
+    # Extras
+    parts.append("\n---\n\n## Extras\n")
+    parts.append("\n### E1. Full head-to-head\n")
+    parts.append(_table(
+        ["game", "config", "agent", "opponent", "score", "W-D-L", "games"],
+        [[r["game"], r["config"], r["agent"], r["opponent"], _score(r),
+          "%d-%d-%d" % (r["wins"], r["draws"], r["losses"]), r["games"]]
+         for r in document["head_to_head"]]))
+    parts.append("\n### E2. Full score table\n")
+    parts.append(_table(
+        ["game", "config", "agent", "W", "D", "L", "score"],
+        [[r["game"], r["config"], r["agent"], r["wins"], r["draws"],
+          r["losses"], _score(r)] for r in document["score_table"]]))
+    parts.append("\n### E3. Move-tag distribution\n")
+    parts.append(_table(
+        ["agent", "tag", "count"],
+        [[r["agent"], r["tag"], r["count"]]
+         for r in document["tag_distribution"]]))
+    parts.append("\n### E4. End reasons\n")
+    parts.append(_table(
+        ["game", "config", "reason", "count"],
+        [[r["game"], r["config"], reason, count]
+         for r in document["game_length"]
+         for reason, count in sorted(r["end_reasons"].items())]))
+    parts.append("\n### E5. Provenance\n")
+    parts.append("\nRegenerate this report with:\n\n"
+                 "```bash\n"
+                 "python3 -m experiments.analyse --raw results/raw \\\n"
+                 "        --json results/analysis.json --label %s\n"
+                 "python3 -m experiments.report --analysis "
+                 "results/analysis.json\n"
+                 "```\n" % (meta["label"] or "unlabelled"))
+
+    return "\n".join(parts) + "\n"
+
+
+def load_run_meta(path):
+    # type: (str) -> dict
+    """Run metadata the CSVs cannot supply - rollout parameters, interpreter,
+    host. Absent is a valid state and renders as "not recorded", never as an
+    invented value."""
+    import json
+    import os
+    if not os.path.exists(path):
+        return {}
+    with open(path) as handle:
+        return json.load(handle)
+
+
+def main(argv=None):
+    # type: (Any) -> int
+    import argparse
+    import json
+    import os
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--analysis", default="results/analysis.json")
+    parser.add_argument("--commentary", default="docs/report/commentary.md")
+    parser.add_argument("--out", default="results/report.md")
+    parser.add_argument("--figures", default="results/figures")
+    args = parser.parse_args(argv)
+
+    with open(args.analysis) as handle:
+        document = json.load(handle)
+
+    sections = {}
+    if os.path.exists(args.commentary):
+        with open(args.commentary) as handle:
+            sections = parse_commentary(handle.read())
+    validate_commentary(sections, SECTION_IDS)
+
+    run_meta = load_run_meta(os.path.join(
+        os.path.dirname(args.analysis) or ".", "run_meta.json"))
+
+    from experiments import figures
+    written = figures.render_all(document, args.figures)
+    names = [os.path.basename(p) for p in written]
+
+    text = render(document, sections, names, run_meta=run_meta)
+    directory = os.path.dirname(args.out)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(args.out, "w") as handle:
+        handle.write(text)
+
+    missing = [i for i in SECTION_IDS if not sections.get(i)]
+    if missing:
+        sys.stderr.write("warning: %d commentary section(s) unfilled: %s\n"
+                         % (len(missing), ", ".join(missing)))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

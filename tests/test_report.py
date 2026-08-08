@@ -1,3 +1,7 @@
+import json
+import os
+import shutil
+import tempfile
 import unittest
 
 from experiments import report
@@ -81,6 +85,48 @@ class DerivedViewsTest(unittest.TestCase):
         rows = report.vs_random(self._document())
         self.assertEqual([r["agent"] for r in rows], ["mcts"])
         self.assertEqual(rows[0]["game"], "ataxx")
+
+
+def _fixture_path():
+    return os.path.join(os.path.dirname(__file__), "fixtures",
+                        "analysis_small.json")
+
+
+class RenderTest(unittest.TestCase):
+    def _document(self):
+        with open(_fixture_path()) as handle:
+            return json.load(handle)
+
+    def test_every_section_id_appears_in_the_output(self):
+        text = report.render(self._document(), {}, [])
+        for section_id in report.SECTION_IDS:
+            self.assertIn("COMMENTARY NEEDED: %s" % section_id, text)
+
+    def test_filled_prose_replaces_the_callout(self):
+        text = report.render(self._document(), {"overview": "Because."}, [])
+        self.assertIn("Because.", text)
+        self.assertNotIn("COMMENTARY NEEDED: overview", text)
+
+    def test_extras_are_present_and_linked(self):
+        text = report.render(self._document(), {}, [])
+        self.assertIn("## Extras", text)
+        self.assertIn("#e1-full-head-to-head", text)
+
+    def test_output_contains_no_wall_clock_timestamp(self):
+        import datetime
+        text = report.render(self._document(), {}, [])
+        self.assertNotIn(str(datetime.date.today().year) + "-", text)
+
+    def test_rendering_twice_is_byte_identical(self):
+        document = self._document()
+        self.assertEqual(report.render(document, {}, []),
+                         report.render(document, {}, []))
+
+    def test_missing_top_level_key_fails_loudly(self):
+        document = self._document()
+        del document["score_table"]
+        with self.assertRaises(KeyError):
+            report.render(document, {}, [])
 
 
 if __name__ == "__main__":
