@@ -225,6 +225,77 @@ def _percentile(sorted_values, pct):
     return sorted_values[min(index, len(sorted_values) - 1)]
 
 
+def search_depth(moves):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Per (game, config, agent): depth reached. Alpha-Beta only in practice,
+    since only it records a depth - MCTS's tree has no single depth."""
+    buckets = {}
+    for m in moves:
+        raw = m.get("depth", "")
+        if raw in (None, ""):
+            continue
+        key = (m["game"], m["config"], m["agent"])
+        buckets.setdefault(key, []).append(int(raw))
+    table = {}
+    for key, values in buckets.items():
+        values.sort()
+        table[key] = {"median_depth": _median(values),
+                      "max_depth": values[-1],
+                      "moves": len(values)}
+    return table
+
+
+def budget_compliance(moves):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Per (game, config, agent): elapsed time as a fraction of the budget.
+
+    This is instrument validation, not a result. A wall-clock budget that the
+    agents systematically overrun would make every comparison in the study
+    describe the overrun rather than the algorithms.
+    """
+    buckets = {}
+    for m in moves:
+        budget = float(m.get("time_budget_s") or 0.0)
+        if budget <= 0:
+            continue
+        key = (m["game"], m["config"], m["agent"])
+        buckets.setdefault(key, []).append(float(m["elapsed_s"]) / budget)
+    table = {}
+    for key, values in buckets.items():
+        values.sort()
+        table[key] = {"mean_ratio": sum(values) / len(values),
+                      "p99_ratio": _percentile(values, 99),
+                      "max_ratio": values[-1],
+                      "moves": len(values)}
+    return table
+
+
+def game_length(rows):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Per (game, config): game length in plies and the end-reason split.
+
+    Agent play and random self-play give very different lengths, and the
+    original runtime estimate for the tournament was wrong by 2.5x because it
+    used the random-play figure. Keyed by config as well as game because the
+    budget changes how long games run, and a single per-game figure hides it.
+    """
+    buckets = {}
+    for row in rows:
+        key = (row["game"], row["config"])
+        e = buckets.setdefault(key, {"plies": [], "end_reasons": {}})
+        e["plies"].append(int(row["plies"]))
+        reason = row["end_reason"]
+        e["end_reasons"][reason] = e["end_reasons"].get(reason, 0) + 1
+    table = {}
+    for key, e in buckets.items():
+        plies = sorted(e["plies"])
+        table[key] = {"mean_plies": sum(plies) / float(len(plies)),
+                      "median_plies": _median(plies),
+                      "games": len(plies),
+                      "end_reasons": e["end_reasons"]}
+    return table
+
+
 def _verdict(per_root):
     # type: (float) -> str
     """Below roughly 10 simulations per root move, MCTS is not meaningfully

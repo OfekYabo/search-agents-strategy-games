@@ -199,5 +199,50 @@ class HeadToHeadTest(unittest.TestCase):
         self.assertNotIn(("uttt", "main", "a", "a"), analyse.head_to_head(rows))
 
 
+class DepthComplianceLengthTest(unittest.TestCase):
+    def test_search_depth_ignores_rows_without_a_depth(self):
+        moves = [
+            {"game": "ataxx", "config": "hard", "agent": "alpha_beta",
+             "depth": "3", "elapsed_s": "0.1", "time_budget_s": "0.1"},
+            {"game": "ataxx", "config": "hard", "agent": "mcts",
+             "depth": "", "elapsed_s": "0.1", "time_budget_s": "0.1"},
+        ]
+        t = analyse.search_depth(moves)
+        self.assertIn(("ataxx", "hard", "alpha_beta"), t)
+        self.assertNotIn(("ataxx", "hard", "mcts"), t)
+        self.assertEqual(t[("ataxx", "hard", "alpha_beta")]["max_depth"], 3)
+
+    def test_budget_compliance_is_a_ratio_of_elapsed_to_budget(self):
+        moves = [
+            {"game": "uttt", "config": "hard", "agent": "mcts", "depth": "",
+             "elapsed_s": "0.050", "time_budget_s": "0.100"},
+            {"game": "uttt", "config": "hard", "agent": "mcts", "depth": "",
+             "elapsed_s": "0.150", "time_budget_s": "0.100"},
+        ]
+        e = analyse.budget_compliance(moves)[("uttt", "hard", "mcts")]
+        self.assertAlmostEqual(e["mean_ratio"], 1.0)
+        self.assertAlmostEqual(e["max_ratio"], 1.5)
+        self.assertEqual(e["moves"], 2)
+
+    def test_budget_compliance_skips_a_zero_budget(self):
+        moves = [{"game": "uttt", "config": "hard", "agent": "mcts",
+                  "depth": "", "elapsed_s": "0.1", "time_budget_s": "0"}]
+        self.assertEqual(analyse.budget_compliance(moves), {})
+
+    def test_game_length_reports_end_reasons(self):
+        rows = [
+            {"game": "ataxx", "config": "easy", "plies": "10",
+             "end_reason": "eliminated"},
+            {"game": "ataxx", "config": "easy", "plies": "20",
+             "end_reason": "board_full"},
+            {"game": "ataxx", "config": "easy", "plies": "30",
+             "end_reason": "eliminated"},
+        ]
+        e = analyse.game_length(rows)[("ataxx", "easy")]
+        self.assertAlmostEqual(e["mean_plies"], 20.0)
+        self.assertAlmostEqual(e["median_plies"], 20.0)
+        self.assertEqual(e["end_reasons"]["eliminated"], 2)
+
+
 if __name__ == "__main__":
     unittest.main()
