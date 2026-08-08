@@ -202,18 +202,76 @@ prose.
 
 ## Report structure
 
-Each section is generated content followed by its commentary slot.
+Each section is generated content followed by its commentary slot. The body is kept direct;
+everything a reader might want to drill into lives in **Extras** at the end, linked from
+the section it belongs to.
 
 | # | Section | Generated | Commentary id |
 |---|---|---|---|
-| 1 | Overview | run size, games, configs, budgets, label | `overview` |
-| 2 | Headline results | score table + `fig-score-by-agent` | `headline-results` |
-| 3 | Head-to-head | matrices + `fig-head-to-head` | `head-to-head` |
+| 1 | Overview | run size, games, configs, budgets, label, integrity line | `overview` |
+| 2 | Method for this run | run-specific configuration; see below | `method` |
+| 3 | Results | head-to-head matrices (primary) + condensed pooled score table + non-transitivity table + `fig-head-to-head`, `fig-score-by-agent` | `results` |
 | 4 | Budget response | `fig-budget-response` + per-game table | `budget-response` |
-| 5 | Search volume and viability | sims-per-root table + `fig-sims-per-root` | `search-volume` |
-| 6 | Instrument validation | budget compliance, error counts, first-move advantage | `instrument-validation` |
-| 7 | Game characteristics | lengths, end reasons, search depth | `game-characteristics` |
-| 8 | Limitations | reproducibility note, jitter, one-sample caveat | `limitations` |
+| 5 | Search volume and viability | sims-per-root table, Alpha-Beta depth, `fig-sims-per-root` | `search-volume` |
+| 6 | Instrument validation | budget compliance, error counts, first-move advantage, every-agent-vs-random check | `instrument-validation` |
+| 7 | Game characteristics | lengths vs random self-play, end reasons, branching context | `game-characteristics` |
+| 8 | Limitations | reproducibility note, jitter, one-sample caveat, CI widths | `limitations` |
+
+**Extras**, at the end, each linked from its body section:
+
+| id | Content |
+|---|---|
+| `E1` | Full per-config head-to-head (108 rows) |
+| `E2` | Full score table, all 36 cells with Wilson intervals |
+| `E3` | Move-tag distribution |
+| `E4` | Per-game x config end-reason breakdown |
+| `E5` | Provenance - exact commands to regenerate this report |
+
+Sections 2 and 3 of the earlier draft (field score, head-to-head) are **merged**. The
+head-to-head matrix leads because the field score conflates opponents and inviting a reader
+to lead with it produces the wrong reading; the pooled field score remains as a summary and
+its full 36-row form moves to `E2`.
+
+### Two derived tables added on review
+
+- **Non-transitivity**: for each game, the score triples among the three non-random agents.
+  MCTS scoring 1.000 against random beside 0.225 against the heuristic on Ataxx is the
+  cleanest evidence for "beaten, not broken", and it should be a generated table rather
+  than a claim in prose.
+- **Every agent vs random**: a one-ply evaluator should crush a random agent, and on
+  Isolation the heuristic scores only 0.750 against it, against 0.963 on UTTT. Isolation is
+  the designated control game (F5), so a weak control belongs in instrument validation
+  where it cannot hide.
+
+## `run_meta.json` - what the CSVs cannot tell us
+
+Two facts needed by section 2 are absent from the data:
+
+1. **The MCTS rollout parameters are not logged.** `MCTS_ROLLOUT` lives only at
+   `tournament.py:43`. The report cannot prove from the data which rollout configuration
+   produced a result. Given that D4 was "the tournament ignored calibration entirely" and
+   the F3 rewrite turned entirely on which rollout configuration was active, this is the
+   single parameter that most needs to be in the data.
+2. **Host and interpreter are not recorded.** F6 states that a wall-clock budget is only
+   meaningful relative to the machine that produced it, and the runbook says to record it,
+   but nothing writes it.
+
+Handling:
+
+- `report.py` reads an optional `results/raw/run_meta.json`. Present, section 2 renders it;
+  absent, section 2 states *"not recorded by this run"* and cites the code constant. It
+  never invents a value.
+- For v1 the file is **hand-written from what is known** (Python 3.10.12, 4 vCPU / 4 GB
+  Multipass guest, tag `v1-tournament`, 7 h 56 m, 0 restarts) and carries
+  `"source": "reconstructed"`, so a reader can tell reconstruction from measurement.
+- **For V2, `tournament.py` should write it at start** - rollout parameters, caps, Python
+  version, platform, git commit. Then the report is self-describing with no reconstruction.
+  This is a measurement-path change and therefore out of scope here; it is recorded as the
+  first V2 improvement.
+
+**Unfilled commentary slots warn and render the callout; they do not fail the build.** The
+skeleton must be generatable before any prose exists, so failing on empty slots would block
+the first run.
 
 ---
 
