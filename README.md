@@ -37,6 +37,24 @@ All search agents operate under a shared per-move time budget and a bounded memo
 
 ---
 
+## Dependencies
+
+**Running the tournament needs nothing installed** — Python 3.8+ and the standard library. That is deliberate, not minimalism: the measurement uses wall-clock per-move budgets, so a lean environment is part of the instrument, and a bare checkout must reproduce a run.
+
+**Reproducing the figures** needs `matplotlib` and `numpy` (`requirements-analysis.txt`). They are imported only by `experiments/analyse.py`, `experiments/report.py` and `experiments/figures.py`, never by the measurement path.
+
+```bash
+python3 -m unittest discover -s tests            # 228 tests, no dependencies
+
+python3 -m experiments.analyse --raw results/raw \
+        --json results/analysis.json --label v1-tournament
+python3 -m experiments.report --analysis results/analysis.json
+```
+
+The report is regenerated from scratch every time and is byte-identical for identical input. Hand-written interpretation lives in `docs/report/commentary.md` and is merged in by section id — never edit `results/report.md` directly.
+
+---
+
 ## Experiment Design
 
 - Round-robin tournament: 6 unique agent pairings per game, both agents starting first an equal number of times

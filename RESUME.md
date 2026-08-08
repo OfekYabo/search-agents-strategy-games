@@ -154,6 +154,26 @@ multipass start tournament     # the service is `enabled`, so it auto-resumes on
 multipass exec tournament -- bash -c "cd search-agents-strategy-games && python3 -m experiments.analyse --raw results/raw | tee results/tables.md"
 ```
 
+Then generate the report — tables, figures and all:
+
+```bash
+python3 -m experiments.analyse --raw results/raw \
+        --json results/analysis.json --label <tag>
+python3 -m experiments.report --analysis results/analysis.json
+```
+
+This needs `matplotlib` and `numpy` (`requirements-analysis.txt`), which the
+tournament itself does not. Output is `results/report.md` plus
+`results/figures/*.svg`, byte-identical for identical input.
+
+**Interpretation goes in `docs/report/commentary.md`, never in
+`results/report.md`** — the report is regenerated from scratch every time and any
+edit to it is lost. Unfilled sections render as visible `[COMMENTARY NEEDED: id]`
+callouts, so gaps are obvious rather than silent.
+
+For a new run, write `results/raw/run_meta.json` (rollout parameters, interpreter,
+host) or section 2 will correctly report that the metadata was not recorded.
+
 Copy the results back to the host before deleting anything:
 
 ```powershell

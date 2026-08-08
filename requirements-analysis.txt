@@ -1,0 +1,4 @@
+# Needed ONLY to analyse a completed run and render the report.
+# Running the tournament itself needs nothing but the standard library.
+matplotlib>=3.5
+numpy>=1.21

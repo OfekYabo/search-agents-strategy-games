@@ -515,6 +515,15 @@ MCTS still beats the random agent 0.95 there, so it is starved rather than broke
 is a width-versus-budget wall, and the pilot must find a budget at which MCTS is viable
 on Ataxx at all, or report that none of the candidate budgets is.
 
+> **CORRECTED by the v1 run (2026-08-08).** These pilot figures were measured with the
+> guided rollout defaults, before calibration selected pure random rollouts. With the
+> calibrated parameters, Ataxx MCTS gets a median of 23.5 / 90.3 / 347.6 simulations per
+> root move at 0.1 / 0.5 / 2.0 s, and no decision in the 2160-game run fell below 1 per
+> root move. MCTS is **beaten, not starved**: it scores 0.050 / 0.175 / 0.450 head to head
+> against the one-ply heuristic across those budgets, and 0.000 against Alpha-Beta at every
+> budget. The width-versus-budget wall is real but far higher than measured here. See
+> `docs/FINDINGS.md` F3.
+
 **Required sweep range**, widened because the best configuration found sits entirely
 outside the range originally specified here:
 
