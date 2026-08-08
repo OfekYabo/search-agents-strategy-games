@@ -125,3 +125,35 @@ class SimulationsPerRootTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WilsonIntervalTest(unittest.TestCase):
+    def test_draws_count_as_half_a_win(self):
+        r = analyse.wilson_interval(0, 10, 0)
+        self.assertAlmostEqual(r["score"], 0.5)
+
+    def test_zero_wins_gives_a_zero_lower_bound_and_a_known_upper(self):
+        # Wilson for 0/10 at z=1.96 is [0, 0.27753...]. The textbook check.
+        r = analyse.wilson_interval(0, 0, 10)
+        self.assertAlmostEqual(r["score"], 0.0)
+        self.assertAlmostEqual(r["ci_low"], 0.0)
+        self.assertAlmostEqual(r["ci_high"], 0.2775402, places=6)
+
+    def test_never_returns_a_negative_lower_bound(self):
+        # The real Ataxx-hard head-to-head: 2 wins, 0 draws, 38 losses. The
+        # normal approximation gives -0.018 here, which cannot be reported.
+        r = analyse.wilson_interval(2, 0, 38)
+        self.assertAlmostEqual(r["score"], 0.05)
+        self.assertGreater(r["ci_low"], 0.0)
+        self.assertAlmostEqual(r["ci_low"], 0.013822, places=5)
+        self.assertAlmostEqual(r["ci_high"], 0.165040, places=5)
+
+    def test_never_returns_an_upper_bound_above_one(self):
+        r = analyse.wilson_interval(40, 0, 0)
+        self.assertAlmostEqual(r["score"], 1.0)
+        self.assertLessEqual(r["ci_high"], 1.0)
+
+    def test_no_games_is_not_a_crash(self):
+        r = analyse.wilson_interval(0, 0, 0)
+        self.assertEqual(r["games"], 0)
+        self.assertEqual(r["score"], 0.0)

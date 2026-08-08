@@ -52,6 +52,30 @@ def binomial_p(wins, n):
     return min(1.0, total)
 
 
+def wilson_interval(wins, draws, losses, z=1.96):
+    # type: (int, int, int, float) -> Dict[str, float]
+    """Wilson score interval for the score rate, draws counting as half a win.
+
+    Not the normal approximation. At the rates this study actually produces -
+    Ataxx MCTS scored 2-0-38 against the heuristic - the normal approximation
+    returns a lower bound of -0.018, which is not a reportable quantity. Wilson
+    is closed-form, needs only `math`, and stays inside [0, 1] at the extremes
+    where the interesting results live.
+    """
+    n = wins + draws + losses
+    if n <= 0:
+        return {"score": 0.0, "ci_low": 0.0, "ci_high": 0.0, "games": 0}
+    p = (wins + 0.5 * draws) / float(n)
+    z2 = z * z
+    denominator = 1.0 + z2 / n
+    centre = p + z2 / (2.0 * n)
+    margin = z * math.sqrt(p * (1.0 - p) / n + z2 / (4.0 * n * n))
+    return {"score": p,
+            "ci_low": max(0.0, (centre - margin) / denominator),
+            "ci_high": min(1.0, (centre + margin) / denominator),
+            "games": n}
+
+
 def score_table(rows):
     # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
     """Per (game, config, agent): wins, draws, losses and score rate.
