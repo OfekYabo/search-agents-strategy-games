@@ -129,5 +129,29 @@ class RenderTest(unittest.TestCase):
             report.render(document, {}, [])
 
 
+class EndToEndDeterminismTest(unittest.TestCase):
+    def test_two_full_renders_are_byte_identical(self):
+        first = tempfile.mkdtemp()
+        second = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, first)
+        self.addCleanup(shutil.rmtree, second)
+        for target in (first, second):
+            report.main([
+                "--analysis", _fixture_path(),
+                "--commentary", "/nonexistent-commentary.md",
+                "--out", os.path.join(target, "report.md"),
+                "--figures", os.path.join(target, "figures")])
+        names = sorted(os.listdir(os.path.join(first, "figures")))
+        self.assertEqual(names,
+                         sorted(os.listdir(os.path.join(second, "figures"))))
+        for relative in ["report.md"] + [
+                os.path.join("figures", n) for n in names]:
+            with open(os.path.join(first, relative), "rb") as h:
+                a = h.read()
+            with open(os.path.join(second, relative), "rb") as h:
+                b = h.read()
+            self.assertEqual(a, b, "%s is not reproducible" % relative)
+
+
 if __name__ == "__main__":
     unittest.main()
