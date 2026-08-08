@@ -270,5 +270,59 @@ class BudgetResponseTest(unittest.TestCase):
         self.assertEqual(point["games"], 1)
 
 
+class BuildAnalysisTest(unittest.TestCase):
+    def _data(self):
+        games = [
+            {"game_id": "g1", "game": "ataxx", "config": "hard",
+             "time_budget_s": "0.1", "max_nodes": "50000",
+             "max_entries": "200000", "agent_first": "mcts",
+             "agent_second": "heuristic", "winner": "second", "plies": "12",
+             "end_reason": "eliminated", "seed": "1", "workers": "1"},
+        ]
+        moves = [
+            {"game_id": "g1", "ply": "0", "agent": "mcts", "side": "first",
+             "tag": "time-limited", "elapsed_s": "0.1", "nodes": "",
+             "simulations": "200", "depth": "", "move": "x",
+             "legal_move_count": "20"},
+        ]
+        return games, moves
+
+    def test_document_has_every_documented_top_level_key(self):
+        games, moves = self._data()
+        doc = analyse.build_analysis(games, moves, label="test")
+        for key in ("meta", "score_table", "head_to_head", "budget_response",
+                    "simulations_per_root", "search_depth",
+                    "budget_compliance", "game_length", "tag_distribution",
+                    "first_move_advantage"):
+            self.assertIn(key, doc)
+
+    def test_meta_records_the_label_and_the_grid_shape(self):
+        games, moves = self._data()
+        meta = analyse.build_analysis(games, moves, label="v1")["meta"]
+        self.assertEqual(meta["label"], "v1")
+        self.assertEqual(meta["games_total"], 1)
+        self.assertEqual(meta["games"], ["ataxx"])
+        self.assertEqual(meta["budgets"], {"ataxx": {"hard": 0.1}})
+
+    def test_join_moves_attaches_game_and_budget(self):
+        games, moves = self._data()
+        joined = analyse.join_moves(games, moves)
+        self.assertEqual(joined[0]["game"], "ataxx")
+        self.assertEqual(joined[0]["config"], "hard")
+        self.assertEqual(joined[0]["time_budget_s"], "0.1")
+
+    def test_join_moves_drops_orphans_rather_than_crashing(self):
+        games, moves = self._data()
+        moves.append(dict(moves[0], game_id="missing"))
+        self.assertEqual(len(analyse.join_moves(games, moves)), 1)
+
+    def test_document_is_json_serialisable_and_sorted(self):
+        import json
+        games, moves = self._data()
+        doc = analyse.build_analysis(games, moves, label="x")
+        text = json.dumps(doc, sort_keys=True, indent=2)
+        self.assertEqual(json.loads(text)["meta"]["label"], "x")
+
+
 if __name__ == "__main__":
     unittest.main()

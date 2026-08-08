@@ -337,6 +337,115 @@ def _verdict(per_root):
     return "STARVED"
 
 
+def budgets_from_games(rows):
+    # type: (List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]
+    out = {}
+    for row in rows:
+        out.setdefault(row["game"], {})[row["config"]] = float(
+            row["time_budget_s"])
+    return out
+
+
+def join_moves(games_rows, moves_rows):
+    # type: (List[Dict[str, Any]], List[Dict[str, Any]]) -> List[Dict[str, Any]]
+    """Attach game, config and time_budget_s to each move row.
+
+    Move rows carry only a game_id, so anything grouped by game or config -
+    and anything measured against the budget - needs this join first. Orphan
+    move rows are dropped rather than raising: the crash-safe logger makes
+    them impossible in a completed run, but an analysis should not be the
+    thing that fails on a half-written file.
+    """
+    index = {}
+    for row in games_rows:
+        index[row["game_id"]] = row
+    joined = []
+    for move in moves_rows:
+        game = index.get(move["game_id"])
+        if game is None:
+            continue
+        merged = dict(move)
+        merged["game"] = game["game"]
+        merged["config"] = game["config"]
+        merged["time_budget_s"] = game["time_budget_s"]
+        joined.append(merged)
+    return joined
+
+
+def _round(value, places=6):
+    # type: (Any, int) -> Any
+    """Round floats at write time so platform float repr cannot leak into the
+    JSON and break byte-for-byte determinism."""
+    if isinstance(value, float):
+        return round(value, places)
+    if isinstance(value, dict):
+        return dict((k, _round(v, places)) for k, v in value.items())
+    if isinstance(value, list):
+        return [_round(v, places) for v in value]
+    return value
+
+
+def build_analysis(games_rows, moves_rows, label=""):
+    # type: (List[Dict[str, Any]], List[Dict[str, Any]], str) -> Dict[str, Any]
+    """The single source of truth for the report. Everything is computed here,
+    once; report.py renders this and never recomputes."""
+    joined = join_moves(games_rows, moves_rows)
+    budgets = budgets_from_games(games_rows)
+
+    scores = score_table(games_rows)
+    h2h = head_to_head(games_rows)
+    sims = simulations_per_root(joined)
+    depth = search_depth(joined)
+    compliance = budget_compliance(joined)
+    lengths = game_length(games_rows)
+    tags = tag_distribution(moves_rows)
+    response = budget_response(games_rows, budgets)
+
+    agents = sorted(set(
+        [r["agent_first"] for r in games_rows]
+        + [r["agent_second"] for r in games_rows]))
+
+    doc = {
+        "meta": {
+            "label": label,
+            "games_total": len(games_rows),
+            "games": sorted(budgets),
+            "configs": sorted(set(r["config"] for r in games_rows)),
+            "agents": agents,
+            "budgets": budgets,
+        },
+        "score_table": [
+            dict(zip(("game", "config", "agent"), key),
+                 wins=e["wins"], draws=e["draws"], losses=e["losses"],
+                 **wilson_interval(e["wins"], e["draws"], e["losses"]))
+            for key, e in sorted(scores.items())],
+        "head_to_head": [
+            dict(zip(("game", "config", "agent", "opponent"), key), **e)
+            for key, e in sorted(h2h.items())],
+        "budget_response": [
+            {"game": key[0], "agent": key[1], "points": points}
+            for key, points in sorted(response.items())],
+        "simulations_per_root": [
+            dict(zip(("game", "config", "agent"), key),
+                 verdict=_verdict(e["median_per_root"]), **e)
+            for key, e in sorted(sims.items())],
+        "search_depth": [
+            dict(zip(("game", "config", "agent"), key), **e)
+            for key, e in sorted(depth.items())],
+        "budget_compliance": [
+            dict(zip(("game", "config", "agent"), key), **e)
+            for key, e in sorted(compliance.items())],
+        "game_length": [
+            dict(zip(("game", "config"), key), **e)
+            for key, e in sorted(lengths.items())],
+        "tag_distribution": [
+            {"agent": key[0], "tag": key[1], "count": count}
+            for key, count in sorted(tags.items())],
+        "first_move_advantage": first_move_advantage(games_rows),
+    }
+    return _round(doc)
+
+
 def first_move_advantage(rows):
     # type: (List[Dict[str, Any]]) -> Dict[str, Any]
     first = sum(1 for r in rows if r["winner"] == "first")
@@ -351,7 +460,12 @@ def first_move_advantage(rows):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--raw", default="results/raw")
-    parser.add_argument("--out", default="results/figures")
+    # There is deliberately no --out here. It existed, defaulted to
+    # results/figures, and was never read - figures were intended from the
+    # start and never built. Figure output belongs to report.py, and two
+    # modules with an --out meaning different things is worse than none.
+    parser.add_argument("--json", default="")
+    parser.add_argument("--label", default="")
     args = parser.parse_args(argv)
 
     games, moves = load(os.path.join(args.raw, "games.csv"),
@@ -420,6 +534,16 @@ def main(argv=None):
           "`p5 /root` and `%% below %d` are given because the viability floor "
           "is a property of each decision, not of the average."
           % int(VIABILITY_FLOOR))
+
+    if args.json:
+        import json
+        document = build_analysis(clean, moves, label=args.label)
+        directory = os.path.dirname(args.json)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        with open(args.json, "w") as handle:
+            json.dump(document, handle, sort_keys=True, indent=2)
+            handle.write("\n")
     return 0
 
 
