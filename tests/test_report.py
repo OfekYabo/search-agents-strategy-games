@@ -153,5 +153,36 @@ class EndToEndDeterminismTest(unittest.TestCase):
             self.assertEqual(a, b, "%s is not reproducible" % relative)
 
 
+class RunMetaTest(unittest.TestCase):
+    def _document(self):
+        with open(_fixture_path()) as handle:
+            return json.load(handle)
+
+    def test_absent_file_is_not_an_error(self):
+        self.assertEqual(report.load_run_meta("/nonexistent.json"), {})
+
+    def test_method_section_says_so_when_metadata_is_missing(self):
+        text = report.render(self._document(), {}, [], run_meta={})
+        self.assertIn("not recorded by this run", text)
+
+    def test_reconstructed_metadata_is_labelled_as_such(self):
+        meta = {"source": "reconstructed", "python": "3.10.12",
+                "mcts_rollout": {"epsilon": 1.0, "sample_k": 1,
+                                 "rollout_depth": 10}}
+        text = report.render(self._document(), {}, [], run_meta=meta)
+        self.assertIn("reconstructed", text)
+        self.assertIn("3.10.12", text)
+
+    def test_the_v1_metadata_file_records_the_rollout_parameters(self):
+        # The one parameter the CSVs cannot supply, and the one whose absence
+        # caused D4 and drove the F3 rewrite.
+        path = os.path.join(os.path.dirname(__file__), os.pardir,
+                            "results", "raw", "run_meta.json")
+        meta = report.load_run_meta(path)
+        self.assertEqual(meta["source"], "reconstructed")
+        self.assertEqual(meta["mcts_rollout"],
+                         {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10})
+
+
 if __name__ == "__main__":
     unittest.main()

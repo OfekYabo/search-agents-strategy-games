@@ -1,0 +1,11 @@
+{
+  "source": "reconstructed",
+  "tag": "v1-tournament",
+  "python": "3.10.12",
+  "platform": "Ubuntu 22.04, Multipass guest, 4 vCPU / 4 GB",
+  "wall_clock": "7h56m",
+  "restarts": 0,
+  "mcts_rollout": {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10},
+  "caps": {"max_nodes": 50000, "max_entries": 200000},
+  "note": "Reconstructed after the fact. The tournament does not write run metadata; see the V2 improvement list."
+}
