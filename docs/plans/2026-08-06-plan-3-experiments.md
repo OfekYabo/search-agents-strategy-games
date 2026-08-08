@@ -671,6 +671,16 @@ Expected: PASS, 8 tests
 
 **And report simulations per root move beside every MCTS result.** This is how a reader tells "MCTS lost" from "MCTS never got to search": measurement found it getting 6 simulations per move on UTTT and 0.3 per root move on Ataxx at 0.1 s — fewer than the number of legal moves, so it could not try each candidate once. Both inputs are already logged (`simulations` and `legal_move_count` in `moves.csv`). Use the **mean of per-move ratios**, not the ratio of means, which would flatter MCTS on positions with few legal moves.
 
+> **CORRECTION (2026-08-08, after the v1 run).** The last sentence is wrong and
+> `analyse.py` implemented it faithfully, producing a figure inflated 4-8x. The mean of
+> per-move ratios does not protect against low-width positions — it is *dominated* by
+> them: a position with one legal move contributes a ratio equal to the entire simulation
+> count, and 10-14% of Ataxx MCTS decisions have exactly one legal move. The ratio of
+> means has the opposite bias. **Use the median of per-move ratios**, and report `p5` and
+> the percentage of decisions below the viability floor beside it, since the floor is a
+> property of each decision rather than of the average. The inflated figure moved
+> Ataxx-hard across the `ample` threshold and would have been quoted in the writeup.
+
 - [ ] **Step 1: Write the failing test**
 
 Create `tests/test_analyse.py`:

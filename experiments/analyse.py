@@ -17,6 +17,11 @@ import os
 import sys
 from typing import Any, Dict, List
 
+# Below this many simulations per root move MCTS cannot try every candidate
+# once, so a result there describes the budget rather than the algorithm.
+# docs/spec/technical-spec.md section 5.5.
+VIABILITY_FLOOR = 10.0
+
 
 def load(games_csv, moves_csv):
     with open(games_csv, newline="") as h:
@@ -93,11 +98,26 @@ def simulations_per_root(moves):
 
     Rows with no simulations value are skipped - that is every Alpha-Beta
     row, since nodes and rollouts are deliberately separate columns and a
-    node is not the same unit of work as a rollout. mean_per_root is the
-    mean of each row's own simulations/legal_move_count ratio, not the ratio
-    of the means: averaging the ratios first, then across rows, keeps a
-    position with few legal moves from flattering the overall mean the way
-    summing simulations and legal counts separately would.
+    node is not the same unit of work as a rollout.
+
+    The headline is the MEDIAN of each row's own simulations/legal_move_count
+    ratio, not the mean of those ratios, and not the ratio of the means.
+
+    The mean of the ratios is unusable here and an earlier version of this
+    function used it. A position with a single legal move contributes a ratio
+    equal to the whole simulation count - tens of thousands - even though no
+    search decision was made there at all. On the real run 10-14% of Ataxx
+    MCTS decisions and 20-25% of Isolation ones have exactly one legal move,
+    and they inflated the reported figure by 4-8x, enough to move Ataxx-hard
+    across the ample threshold. The ratio of the means has the opposite bias:
+    it weights each decision by its branching factor, so it under-reports
+    exactly the low-width endgame positions.
+
+    The median describes a typical decision under either skew. Because the
+    spec's floor is a property of each decision rather than of the average,
+    p5_per_root and pct_below_floor are reported beside it - a config can
+    average comfortably and still spend a fifth of its decisions unable to
+    try every candidate once.
     """
     sums = {}
     for m in moves:
@@ -110,32 +130,58 @@ def simulations_per_root(moves):
         if legal_count <= 0:
             continue
         key = (m["game"], m["config"], m["agent"])
-        acc = sums.setdefault(key, {"sim_total": 0.0, "ratio_total": 0.0,
-                                     "n": 0})
+        acc = sums.setdefault(key, {"sim_total": 0.0, "ratios": []})
         acc["sim_total"] += simulations
-        acc["ratio_total"] += simulations / legal_count
-        acc["n"] += 1
+        acc["ratios"].append(simulations / legal_count)
     table = {}
     for key, acc in sums.items():
-        n = acc["n"]
+        ratios = sorted(acc["ratios"])
+        n = len(ratios)
+        below = sum(1 for r in ratios if r < VIABILITY_FLOOR)
         table[key] = {
             "moves": n,
             "mean_simulations": acc["sim_total"] / n if n else 0.0,
-            "mean_per_root": acc["ratio_total"] / n if n else 0.0,
+            "median_per_root": _median(ratios),
+            "mean_per_root": sum(ratios) / n if n else 0.0,
+            "p5_per_root": _percentile(ratios, 5),
+            "pct_below_floor": 100.0 * below / n if n else 0.0,
         }
     return table
 
 
-def _verdict(mean_per_root):
+def _median(sorted_values):
+    # type: (List[float]) -> float
+    n = len(sorted_values)
+    if not n:
+        return 0.0
+    middle = n // 2
+    if n % 2:
+        return sorted_values[middle]
+    return (sorted_values[middle - 1] + sorted_values[middle]) / 2.0
+
+
+def _percentile(sorted_values, pct):
+    # type: (List[float], float) -> float
+    """Nearest-rank percentile. Used for the low tail, where the question is
+    'how bad did the worst decisions get', so rounding toward the worse
+    observation is the conservative direction."""
+    if not sorted_values:
+        return 0.0
+    index = int(pct / 100.0 * len(sorted_values))
+    return sorted_values[min(index, len(sorted_values) - 1)]
+
+
+def _verdict(per_root):
     # type: (float) -> str
     """Below roughly 10 simulations per root move, MCTS is not meaningfully
     searching. Thresholds per the spec: ample >= 30, viable >= 10, thin >= 3,
-    STARVED below that."""
-    if mean_per_root >= 30:
+    STARVED below that. Feed this the median, not the mean - see
+    simulations_per_root."""
+    if per_root >= 30:
         return "ample"
-    if mean_per_root >= 10:
+    if per_root >= VIABILITY_FLOOR:
         return "viable"
-    if mean_per_root >= 3:
+    if per_root >= 3:
         return "thin"
     return "STARVED"
 
@@ -204,16 +250,25 @@ def main(argv=None):
         joined_moves.append(merged)
 
     print("\n## Simulations per root move (MCTS)")
-    print("\n| game | config | agent | mean sims | per root move | verdict |")
-    print("|---|---|---|---|---|---|")
+    print("\n| game | config | agent | mean sims | median /root | p5 /root "
+          "| %% below %d | verdict |" % int(VIABILITY_FLOOR))
+    print("|---|---|---|---|---|---|---|---|")
     sims = simulations_per_root(joined_moves)
     for key in sorted(sims):
         e = sims[key]
-        print("| %s | %s | %s | %.1f | %.1f | %s |"
+        print("| %s | %s | %s | %.1f | %.1f | %.1f | %.1f%% | %s |"
               % (key[0], key[1], key[2], e["mean_simulations"],
-                 e["mean_per_root"], _verdict(e["mean_per_root"])))
+                 e["median_per_root"], e["p5_per_root"],
+                 e["pct_below_floor"], _verdict(e["median_per_root"])))
     print("\nA STARVED row means the budget, not the algorithm, is what the "
           "result describes.")
+    print("\nThe headline is the MEDIAN of the per-decision "
+          "simulations/legal-moves ratio. The mean of that ratio is not "
+          "reported because positions with a single legal move contribute a "
+          "ratio equal to the entire simulation count and inflate it by 4-8x; "
+          "`p5 /root` and `%% below %d` are given because the viability floor "
+          "is a property of each decision, not of the average."
+          % int(VIABILITY_FLOOR))
     return 0
 
 

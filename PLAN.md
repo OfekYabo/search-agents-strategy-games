@@ -190,9 +190,66 @@ Three consequences, all of which belong in the report:
 
 - **Isolation is saturated for both agents at every budget.** Alpha-Beta completes at depth 5 in 508 nodes and *solves* the position regardless of time; MCTS has over a thousand simulations per root move even at 0.02 s. Neither agent is budget-limited here, so Isolation measures something different from the other two games - it is the control, not a degradation datapoint.
 - **Ataxx starves both paradigms**, and it is the *medium* state-space game. Alpha-Beta reaches only depth 2-4 even at 5 s against mid-game branching of ~82. **Width, not state-space size, is what defeats search here** - which is precisely why branching factor and state space had to be reported as separate axes.
-- **MCTS never becomes viable on Ataxx within affordable budgets.** It needs ~5 s to pass 10 simulations per root move, and a single 5 s config on Ataxx costs about **30 hours** of compute. We therefore report the starvation, with simulations-per-root-move alongside every result so it cannot be mistaken for an implementation failure. **That MCTS cannot convert a realistic budget into meaningful search on a high-branching game is an answer to the research question, not an obstacle to one.**
+- ~~**MCTS never becomes viable on Ataxx within affordable budgets.**~~ **SUPERSEDED by the v1 run — see "Ataxx MCTS: the starvation reading was wrong" below.** The pilot figures above were measured with the *guided* rollout defaults (`epsilon=0.25, sample_k=8, rollout_depth=40`), which cost up to `k*D` child evaluations per rollout. Calibration phase 3 later selected pure random rollouts (`epsilon=1.0, sample_k=1, rollout_depth=10`), which multiplied Ataxx simulations by 9.4x. MCTS clears 10 simulations per root move at **0.1 s**, not 5 s.
 
 Record the **hardware and Python version** alongside these values. A time budget is only meaningful relative to the machine that produced it, and the report needs that for reproducibility.
+
+### Ataxx MCTS: the starvation reading was wrong
+
+*Written after the v1 run (2160 games, 2026-08-08). This replaces the third bullet above.*
+
+The pilot concluded MCTS was **starved** on Ataxx — under 5 simulations per root move,
+so its losses described the budget rather than the algorithm. The full run contradicts
+that on both halves of the claim.
+
+**It is not starved.** With the calibrated rollout parameters, the median decision gets:
+
+| config | budget | median sims/root | p5 | % of decisions below the floor of 10 | verdict |
+|---|---|---|---|---|---|
+| hard | 0.1 s | 23.5 | 3.9 | 20.1% | viable |
+| main | 0.5 s | 90.3 | 36.9 | 0.0% | ample |
+| easy | 2.0 s | 347.6 | 122.1 | 0.0% | ample |
+
+**No decision in the entire run fell below 1 simulation per root move**, so "cannot try
+each candidate once" is false everywhere. Only Ataxx-hard is meaningfully thin, and only
+in its lower tail.
+
+**And it still loses.** Head-to-head against the one-ply heuristic, both seat orders,
+40 games per cell:
+
+| config | W-D-L | score | 95% CI |
+|---|---|---|---|
+| hard | 2-0-38 | **0.050** | [0.000, 0.118] |
+| main | 7-0-33 | **0.175** | [0.057, 0.293] |
+| easy | 18-0-22 | **0.450** | [0.296, 0.604] |
+
+Against Alpha-Beta it scores **0.000 at every budget** (0-0-40 three times); against the
+random agent, **1.000** at every budget. It is not broken — it is beaten.
+
+**The correct reading is a width-versus-budget wall, but a much higher one than the
+pilot measured.** Two things follow that the starvation story obscured:
+
+1. **The viability floor is a floor, not a sufficiency criterion.** Ataxx-main is "ample"
+   by the spec's `>= 30` threshold and still scores 0.175. Clearing the floor buys the
+   ability to try each candidate once; it does not buy competitive play at branching ~25-30.
+2. **The budget response is steep and monotone** — 0.050 → 0.175 → 0.450 for a 20x budget
+   increase. At 2.0 s the confidence interval includes 0.5, so MCTS reaches *parity* with
+   the heuristic, having gone from crushed to even. Budget still binds hard at 0.1 s even
+   though the sims-per-root-move figure looks respectable there.
+
+So the honest claim is **not** "MCTS cannot convert a realistic budget into meaningful
+search on a high-branching game." It is: *MCTS converts budget into search efficiently on
+Ataxx, but converts search into strength very inefficiently there* — it needs on the order
+of 350 simulations per root move to match a one-ply evaluator that examines every move
+once. That is a statement about the algorithm, which is what the research question asked
+for, and it is a stronger result than the starvation reading it replaces.
+
+> The pilot's error was not a measurement mistake but a **configuration** one: guided
+> rollouts at `k=8, D=40` starved the tree, and the starvation was then attributed to
+> Ataxx's branching factor rather than to the rollout policy. This is the same failure
+> mode as the `MCTS_ROLLOUT` bug — an agent handicapped by its configuration looks like a
+> finding about the algorithm. Report simulations per root move beside every result
+> precisely so this is visible.
 
 ---
 

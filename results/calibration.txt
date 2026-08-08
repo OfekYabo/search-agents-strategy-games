@@ -1,0 +1,94 @@
+======================================================================
+PHASE 0 - budget adherence (GATE)
+======================================================================
+  isolation  random      budget 0.02   mean 0.000   max 0.000    ok
+  isolation  random      budget 0.10   mean 0.000   max 0.000    ok
+  isolation  random      budget 0.50   mean 0.000   max 0.000    ok
+  isolation  heuristic   budget 0.02   mean 0.000   max 0.000    ok
+  isolation  heuristic   budget 0.10   mean 0.000   max 0.000    ok
+  isolation  heuristic   budget 0.50   mean 0.000   max 0.000    ok
+  isolation  alpha_beta  budget 0.02   mean 0.018   max 0.020    ok
+  isolation  alpha_beta  budget 0.10   mean 0.051   max 0.100    ok
+  isolation  alpha_beta  budget 0.50   mean 0.125   max 0.465    ok
+  isolation  mcts        budget 0.02   mean 0.020   max 0.020    ok
+  isolation  mcts        budget 0.10   mean 0.100   max 0.100    ok
+  isolation  mcts        budget 0.50   mean 0.500   max 0.500    ok
+  uttt       random      budget 0.10   mean 0.000   max 0.000    ok
+  uttt       random      budget 0.50   mean 0.000   max 0.000    ok
+  uttt       random      budget 2.00   mean 0.000   max 0.000    ok
+  uttt       heuristic   budget 0.10   mean 0.001   max 0.001    ok
+  uttt       heuristic   budget 0.50   mean 0.001   max 0.001    ok
+  uttt       heuristic   budget 2.00   mean 0.001   max 0.001    ok
+  uttt       alpha_beta  budget 0.10   mean 0.101   max 0.103    ok
+  uttt       alpha_beta  budget 0.50   mean 0.501   max 0.502    ok
+  uttt       alpha_beta  budget 2.00   mean 2.000   max 2.001    ok
+  uttt       mcts        budget 0.10   mean 0.101   max 0.101    ok
+  uttt       mcts        budget 0.50   mean 0.501   max 0.501    ok
+  uttt       mcts        budget 2.00   mean 2.000   max 2.000    ok
+  ataxx      random      budget 0.10   mean 0.000   max 0.000    ok
+  ataxx      random      budget 0.50   mean 0.000   max 0.000    ok
+  ataxx      random      budget 2.00   mean 0.000   max 0.000    ok
+  ataxx      heuristic   budget 0.10   mean 0.000   max 0.000    ok
+  ataxx      heuristic   budget 0.50   mean 0.000   max 0.001    ok
+  ataxx      heuristic   budget 2.00   mean 0.001   max 0.001    ok
+  ataxx      alpha_beta  budget 0.10   mean 0.090   max 0.100    ok
+  ataxx      alpha_beta  budget 0.50   mean 0.403   max 0.500    ok
+  ataxx      alpha_beta  budget 2.00   mean 1.603   max 2.000    ok
+  ataxx      mcts        budget 0.10   mean 0.100   max 0.100    ok
+  ataxx      mcts        budget 0.50   mean 0.500   max 0.500    ok
+  ataxx      mcts        budget 2.00   mean 2.000   max 2.000    ok
+
+PHASE 0 PASSED
+
+======================================================================
+PHASE 2 - memory caps
+======================================================================
+  isolation  alpha_beta  cap 200      memory-limited  33.3% of 21 moves
+  isolation  alpha_beta  cap 2000     memory-limited  33.3% of 21 moves
+  isolation  alpha_beta  cap 20000    memory-limited  23.8% of 21 moves
+  isolation  alpha_beta  cap 200000   memory-limited   0.0% of 17 moves
+  isolation  mcts        cap 50       memory-limited  70.0% of 20 moves
+  isolation  mcts        cap 500      memory-limited  60.0% of 20 moves
+  isolation  mcts        cap 5000     memory-limited   0.0% of 23 moves
+  isolation  mcts        cap 50000    memory-limited   0.0% of 21 moves
+  uttt       alpha_beta  cap 200      memory-limited 100.0% of 40 moves
+  uttt       alpha_beta  cap 2000     memory-limited  97.5% of 40 moves
+  uttt       alpha_beta  cap 20000    memory-limited  65.0% of 40 moves
+  uttt       alpha_beta  cap 200000   memory-limited   0.0% of 40 moves
+  uttt       mcts        cap 50       memory-limited  50.0% of 40 moves
+  uttt       mcts        cap 500      memory-limited   5.6% of 36 moves
+  uttt       mcts        cap 5000     memory-limited   0.0% of 40 moves
+  uttt       mcts        cap 50000    memory-limited   0.0% of 40 moves
+  ataxx      alpha_beta  cap 200      memory-limited 100.0% of 40 moves
+  ataxx      alpha_beta  cap 2000     memory-limited 100.0% of 40 moves
+  ataxx      alpha_beta  cap 20000    memory-limited  85.0% of 40 moves
+  ataxx      alpha_beta  cap 200000   memory-limited   0.0% of 40 moves
+  ataxx      mcts        cap 50       memory-limited 100.0% of 10 moves
+  ataxx      mcts        cap 500      memory-limited   0.0% of 11 moves
+  ataxx      mcts        cap 5000     memory-limited   0.0% of 40 moves
+  ataxx      mcts        cap 50000    memory-limited   0.0% of 40 moves
+
+======================================================================
+PHASE 3 - MCTS rollout hyperparameters
+======================================================================
+  --- isolation at 0.10s ---
+    eps0.25  k8   D40    sims 55099  per-root 55099.0 score 0.88
+    eps0.25  k2   D40    sims 61620  per-root 61620.0 score 0.88
+    eps0.50  k2   D10    sims 68547  per-root 68547.0 score 1.00
+    eps0.80  k2   D10    sims 67737  per-root 67737.0 score 0.88
+    eps1.00  k1   D10    sims 74056  per-root 74056.0 score 1.00
+    eps1.00  k1   D400   sims 44354  per-root 44354.0 score 1.00
+  --- uttt at 0.50s ---
+    eps0.25  k8   D40    sims 46     per-root 5.8     score 0.81  (below viability floor)
+    eps0.25  k2   D40    sims 109    per-root 13.6    score 0.88
+    eps0.50  k2   D10    sims 342    per-root 42.8    score 0.62
+    eps0.80  k2   D10    sims 933    per-root 116.6   score 0.75
+    eps1.00  k1   D10    sims 2660   per-root 332.5   score 1.00
+    eps1.00  k1   D400   sims 1498   per-root 187.2   score 1.00
+  --- ataxx at 0.50s ---
+    eps0.25  k8   D40    sims 147    per-root 2.5     score 0.00  (below viability floor)
+    eps0.25  k2   D40    sims 284    per-root 4.7     score 0.00  (below viability floor)
+    eps0.50  k2   D10    sims 1375   per-root 22.9    score 0.12
+    eps0.80  k2   D10    sims 1519   per-root 25.3    score 0.25
+    eps1.00  k1   D10    sims 1572   per-root 26.2    score 0.38
+    eps1.00  k1   D400   sims 70     per-root 1.2     score 0.00  (below viability floor)

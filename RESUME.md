@@ -180,12 +180,29 @@ Expect **2160 games, 0 dupes, 0 illegal_move, 0 agent_error**.
 
 ## 7. Three findings to carry into the writeup — settled, do not re-derive
 
-1. **Ataxx MCTS is weak at every budget** (best score 0.38; several below the
-   viability floor). This is **intended and is a headline result**, not a bug.
-   Mean branching ~51, peak 76, so MCTS gets very few simulations per root move
-   and cannot try each candidate once. **Report simulations-per-root-move beside
-   every result.** Post-fix that number is **13.7** on Ataxx-hard (it was 0.6
-   before the rollout fix) — quote the post-fix figure.
+1. **Ataxx MCTS is beaten, not starved.** *(Rewritten 2026-08-08 against the
+   completed run. The earlier "starved, <5 sims per root move" version was
+   measured before the `MCTS_ROLLOUT` fix and is wrong — do not quote it.)*
+
+   Search is **not** the limiting factor: median simulations per root move are
+   23.5 (hard) / 90.3 (main) / 347.6 (easy), and **no decision in the whole run
+   fell below 1 per root move**. Only Ataxx-hard is thin, and only in its tail
+   (p5 = 3.9; 20.1% of decisions below the floor of 10).
+
+   It loses anyway. Head-to-head vs the one-ply heuristic, 40 games per cell:
+   **0.050** (hard), **0.175** (main), **0.450** (easy, 95% CI [0.296, 0.604]).
+   Versus alpha_beta it scores **0.000** at every budget; versus random,
+   **1.000**. Not broken — beaten.
+
+   Two points to carry into the writeup:
+   - **Clearing the viability floor is not sufficiency.** Ataxx-main is "ample"
+     by the `>= 30` threshold and still scores 0.175.
+   - **The budget response is steep and monotone** (0.050 → 0.175 → 0.450 over a
+     20x budget increase), reaching parity with the heuristic at 2.0 s.
+
+   Full argument in `PLAN.md`, section "Ataxx MCTS: the starvation reading was
+   wrong". **Still report simulations-per-root-move beside every result** — it is
+   what distinguishes "lost" from "never searched", and it is what caught this.
 
 2. **Ataxx alpha_beta returns under budget** (mean 1.603 s vs 2.00 s). Correct
    behaviour: early completion on a proven win/loss (`abs(value) >= 1.0`), common

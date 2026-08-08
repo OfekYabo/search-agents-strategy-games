@@ -1,0 +1,18 @@
+
+=== isolation (500 random games) ===
+  mean b 6.27 | median b 6.0 | max b 14 | mean length 15.9 plies
+  ply-1 b 11.0 | peak b 11.0 at ply 0
+  reference: derived: 11 at ply 1, max 16, at most 23 plies
+  by ply -> 0:11  1:10  2:10  3:9  4:8  5:8  6:7  7:6  8:6  9:5  10:5  11:4  12:4  13:3  14:3  15:3  16:2  17:2  18:2  19:2  20:2  21:1  22:1
+
+=== uttt (300 random games) ===
+  mean b 9.14 | median b 7.0 | max b 81 | mean length 59.5 plies
+  ply-1 b 81.0 | peak b 81.0 at ply 0
+  reference: derived: 81 at ply 1, at most 81 plies
+  by ply -> 0:81  2:9  4:9  6:8  8:8  10:8  12:8  14:8  16:8  18:8  20:8  22:8  24:8  26:8  28:8  30:9  32:8  34:8  36:8  38:9  40:8  42:9  44:9  46:9  48:8  50:8  52:8  54:7  56:7  58:6  60:5  62:4  64:3  66:3  68:2  70:2  72:2
+
+=== ataxx (200 random games) ===
+  mean b 50.94 | median b 50.0 | max b 149 | mean length 182.6 plies
+  ply-1 b 16.0 | peak b 76.3 at ply 62
+  reference: Ribeiro and Figueiredo 2018: ~20 at ply 1, peak ~92 near ply 25, ~100 plies average (on 47 playable cells; ours has 49)
+  by ply -> 0:16  12:46  24:58  36:64  48:73  60:76  72:73  84:72  96:67  108:63  120:61  132:50  144:43  156:37  168:30  180:23  192:20  204:17  216:15  228:12  240:13  252:20  264:16  276:10  288:11  300:8

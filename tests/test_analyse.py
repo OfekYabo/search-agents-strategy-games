@@ -78,10 +78,49 @@ class SimulationsPerRootTest(unittest.TestCase):
         ]
         table = analyse.simulations_per_root(rows)
         entry = table[("isolation", "hard", "mcts")]
-        # Mean of per-row ratios: (10/5 + 100/10) / 2 = (2 + 10) / 2 = 6.0.
-        # The ratio of the means would be (10+100)/(5+10) = 7.333..., a
-        # different number - this test guards against computing that instead.
-        self.assertAlmostEqual(entry["mean_per_root"], 6.0)
+        # Each row's own ratio: 10/5 = 2 and 100/10 = 10. The median of the
+        # two is 6.0. The ratio of the summed columns would be
+        # (10+100)/(5+10) = 7.333..., a different number - this guards
+        # against dividing the wrong pair of aggregates.
+        self.assertAlmostEqual(entry["median_per_root"], 6.0)
+
+    def test_headline_is_not_inflated_by_single_legal_move_positions(self):
+        """A position with one legal move contributes a ratio equal to the
+        entire simulation count, so a mean over per-row ratios is dragged
+        above the ample threshold by endgame positions that involved no
+        search decision at all. On the real Ataxx data 10-14% of MCTS
+        decisions have exactly one legal move.
+        """
+        rows = [{"game": "ataxx", "config": "hard", "agent": "mcts",
+                 "simulations": "400", "legal_move_count": "20"}
+                for _ in range(9)]
+        rows.append({"game": "ataxx", "config": "hard", "agent": "mcts",
+                     "simulations": "400", "legal_move_count": "1"})
+        entry = analyse.simulations_per_root(rows)[("ataxx", "hard", "mcts")]
+
+        # The mean of the ratios is (9*20 + 400)/10 = 58.0, which reads as
+        # "ample". Nine of those ten decisions actually saw 20 per root move.
+        self.assertAlmostEqual(entry["mean_per_root"], 58.0)
+        self.assertEqual(analyse._verdict(entry["mean_per_root"]), "ample")
+
+        self.assertAlmostEqual(entry["median_per_root"], 20.0)
+        self.assertEqual(analyse._verdict(entry["median_per_root"]), "viable")
+
+    def test_pct_below_floor_counts_decisions_that_cannot_search(self):
+        """The spec's floor is a property of each decision, not of the mean:
+        a config whose average is comfortable can still spend a fifth of its
+        decisions below the floor."""
+        rows = [{"game": "uttt", "config": "hard", "agent": "mcts",
+                 "simulations": "5", "legal_move_count": "1"}]
+        rows += [{"game": "uttt", "config": "hard", "agent": "mcts",
+                  "simulations": "9", "legal_move_count": "1"}]
+        rows += [{"game": "uttt", "config": "hard", "agent": "mcts",
+                  "simulations": "1000", "legal_move_count": "10"}
+                 for _ in range(2)]
+        entry = analyse.simulations_per_root(rows)[("uttt", "hard", "mcts")]
+        # 5 and 9 are below the floor of 10; 100 and 100 are not.
+        self.assertAlmostEqual(entry["pct_below_floor"], 50.0)
+        self.assertAlmostEqual(entry["p5_per_root"], 5.0)
 
 
 if __name__ == "__main__":

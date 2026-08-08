@@ -5,9 +5,9 @@ __pycache__/
 # Editor and agent tooling state, not project content
 .claude/
 
-# Run output. calibration.txt and branching.txt are kept deliberately.
+# Smoke-test output is throwaway; the v1 run's raw CSVs, calibration and
+# tables are the evidence base and ARE tracked.
 results/smoke/
 results/smoke2/
 results/smoke3/
-results/raw/
 results/tournament.log
