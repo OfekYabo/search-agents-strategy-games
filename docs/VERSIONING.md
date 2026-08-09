@@ -142,6 +142,13 @@ comparison target; it is the historical baseline whose report is already written
 
 ---
 
+## For whoever is building v3
+
+`docs/v3-candidates.md` holds the measured leads, the code already written for them,
+and the two caveats that decide how much each is worth. Start there rather than from
+theory - the obvious Isolation improvement (penalise opponent mobility harder) measures
+*worse*, and so does partition detection on its own.
+
 ## Deciding whether a change is worth a version
 
 Version numbers are cheap; runs are not. The V2 grid costs about **10 hours**. Before
