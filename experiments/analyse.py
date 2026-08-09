@@ -372,6 +372,43 @@ def join_moves(games_rows, moves_rows):
     return joined
 
 
+def roster_from_games(rows):
+    # type: (List[Dict[str, Any]]) -> Any
+    """Agent hyperparameters, read from the CSV rather than from a metadata
+    file or a document.
+
+    Keyed `label@version`, because the whole point is the case a single
+    run-level roster cannot express: the same agent label at two versions,
+    with different parameters, inside one run. That is exactly what a
+    version-comparison run looks like.
+
+    Returns the roster and a sorted list of keys that showed conflicting
+    parameters. A conflict means the run is not what it claims to be, so it is
+    surfaced rather than resolved by keeping whichever row was read last.
+    """
+    import json
+    roster = {}
+    conflicts = set()
+    for row in rows:
+        for side in ("first", "second"):
+            label = row.get("agent_%s" % side)
+            if not label:
+                continue
+            version = row.get("agent_%s_version" % side) or "v1"
+            raw = row.get("agent_%s_params" % side)
+            if raw in (None, ""):
+                continue
+            try:
+                params = json.loads(raw)
+            except ValueError:
+                continue
+            key = "%s@%s" % (label, version)
+            if key in roster and roster[key] != params:
+                conflicts.add(key)
+            roster[key] = params
+    return roster, sorted(conflicts)
+
+
 def _round(value, places=6):
     # type: (Any, int) -> Any
     """Round floats at write time so platform float repr cannot leak into the
@@ -404,6 +441,7 @@ def build_analysis(games_rows, moves_rows, label=""):
     agents = sorted(set(
         [r["agent_first"] for r in games_rows]
         + [r["agent_second"] for r in games_rows]))
+    roster, roster_conflicts = roster_from_games(games_rows)
 
     doc = {
         "meta": {
@@ -413,6 +451,12 @@ def build_analysis(games_rows, moves_rows, label=""):
             "configs": sorted(set(r["config"] for r in games_rows)),
             "agents": agents,
             "budgets": budgets,
+            "agent_versions": sorted(set(
+                [r.get("agent_first_version") or "v1" for r in games_rows]
+                + [r.get("agent_second_version") or "v1"
+                   for r in games_rows])),
+            "roster": roster,
+            "roster_conflicts": roster_conflicts,
         },
         "score_table": [
             dict(zip(("game", "config", "agent"), key),

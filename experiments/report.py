@@ -219,12 +219,30 @@ def render(document, sections, figure_names, run_meta=None):
         parts.append(_table(
             ["property", "value"],
             [[key, _plain(run_meta[key])] for key in sorted(run_meta)
-             if key != "source"]))
+             if key not in ("source", "roster", "starts")]))
     else:
         parts.append("\n> Run metadata was **not recorded by this run**. "
                      "The MCTS rollout parameters, interpreter version and "
                      "host are not present in the CSVs; see "
                      "`experiments/tournament.py` at the run's tag.\n")
+    # The roster comes from analysis.json, which is derived from games.csv.
+    # run_meta is a claim about the run; this describes what actually ran, and
+    # it is the only form that can express one agent label at two versions.
+    roster = meta.get("roster") or {}
+    if roster:
+        parts.append("\n**Agent roster and hyperparameters**, read from "
+                     "`games.csv` rather than from metadata, so it describes "
+                     "what actually ran\n")
+        parts.append(_table(
+            ["agent", "version", "hyperparameters"],
+            [[key.split("@")[0], key.split("@")[-1],
+              _plain(roster[key]) if roster[key] else "-"]
+             for key in sorted(roster)]))
+    for key in meta.get("roster_conflicts") or []:
+        parts.append("\n> **WARNING: %s ran with more than one set of "
+                     "hyperparameters in this run.** The run is not what it "
+                     "claims to be; do not compare these results until it is "
+                     "explained.\n" % key)
     parts.append(slot("method"))
 
     # 3. Results

@@ -323,6 +323,64 @@ class BuildAnalysisTest(unittest.TestCase):
         text = json.dumps(doc, sort_keys=True, indent=2)
         self.assertEqual(json.loads(text)["meta"]["label"], "x")
 
+class AgentVersionMetaTest(unittest.TestCase):
+    BASE = {"game": "ataxx", "config": "hard", "time_budget_s": "0.1",
+            "winner": "first", "plies": "9", "end_reason": "eliminated"}
+
+    def test_meta_records_the_agent_versions_present(self):
+        games = [dict(self.BASE, game_id="g1", agent_first="mcts",
+                      agent_second="heuristic", agent_first_version="v2",
+                      agent_second_version="v2")]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertEqual(meta["agent_versions"], ["v2"])
+
+    def test_missing_version_columns_default_to_v1(self):
+        games = [dict(self.BASE, game_id="g1", agent_first="mcts",
+                      agent_second="heuristic")]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertEqual(meta["agent_versions"], ["v1"])
+
+    def test_roster_is_read_from_the_csv_not_guessed(self):
+        """The hyperparameters must come from the data. run_meta holds one
+        roster for a whole run and cannot describe a comparison run where two
+        agents carry different parameters in the same game."""
+        games = [dict(self.BASE, game_id="g1", agent_first="mcts",
+                      agent_second="heuristic",
+                      agent_first_version="v2", agent_second_version="v2",
+                      agent_first_params='{"epsilon": 1.0, "sample_k": 1}',
+                      agent_second_params="{}")]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertEqual(meta["roster"]["mcts@v2"],
+                         {"epsilon": 1.0, "sample_k": 1})
+        self.assertEqual(meta["roster"]["heuristic@v2"], {})
+
+    def test_two_versions_of_one_agent_keep_separate_parameters(self):
+        """The case run_meta cannot express: same label, two versions, two
+        parameter sets, in the same run."""
+        games = [dict(self.BASE, game_id="g1", agent_first="mcts",
+                      agent_second="mcts",
+                      agent_first_version="v2", agent_second_version="v3",
+                      agent_first_params='{"epsilon": 1.0}',
+                      agent_second_params='{"epsilon": 0.8}')]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertEqual(meta["roster"]["mcts@v2"], {"epsilon": 1.0})
+        self.assertEqual(meta["roster"]["mcts@v3"], {"epsilon": 0.8})
+
+    def test_conflicting_parameters_for_one_agent_version_are_flagged(self):
+        """If one agent at one version shows two parameter sets in a single
+        run, the run is not what it claims to be. It must not be silently
+        resolved by keeping whichever row was read last."""
+        shared = dict(self.BASE, agent_second="random",
+                      agent_second_version="v2", agent_second_params="{}")
+        games = [dict(shared, game_id="g1", agent_first="mcts",
+                      agent_first_version="v2",
+                      agent_first_params='{"epsilon": 1.0}'),
+                 dict(shared, game_id="g2", agent_first="mcts",
+                      agent_first_version="v2",
+                      agent_first_params='{"epsilon": 0.5}')]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertIn("mcts@v2", meta["roster_conflicts"])
+
 
 if __name__ == "__main__":
     unittest.main()

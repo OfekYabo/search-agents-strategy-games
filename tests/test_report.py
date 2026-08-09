@@ -259,6 +259,35 @@ class DepthFormattingTest(unittest.TestCase):
             self.assertRegex(cells[3], r"^\d+\.\d$",
                              "median depth %r is not formatted" % cells[3])
 
+class RosterSectionTest(unittest.TestCase):
+    def _document(self, **meta_extra):
+        with open(_fixture_path()) as handle:
+            document = json.load(handle)
+        document["meta"].update(meta_extra)
+        return document
+
+    def test_roster_comes_from_the_analysis_not_from_run_meta(self):
+        """run_meta is a claim about the run; the analysis roster is derived
+        from games.csv and describes what actually ran."""
+        document = self._document(
+            roster={"mcts@v2": {"epsilon": 1.0}, "random@v2": {}},
+            roster_conflicts=[])
+        text = report.render(document, {}, [], run_meta={"source": "recorded"})
+        self.assertIn("epsilon=1.0", text)
+        self.assertIn("v2", text)
+
+    def test_conflicting_parameters_produce_a_visible_warning(self):
+        document = self._document(roster={"mcts@v2": {"epsilon": 1.0}},
+                                  roster_conflicts=["mcts@v2"])
+        text = report.render(document, {}, [])
+        self.assertIn("WARNING", text)
+        self.assertIn("mcts@v2", text)
+
+    def test_absent_roster_renders_nothing_extra(self):
+        document = self._document(roster={}, roster_conflicts=[])
+        text = report.render(document, {}, [])
+        self.assertNotIn("WARNING", text)
+
 
 if __name__ == "__main__":
     unittest.main()
