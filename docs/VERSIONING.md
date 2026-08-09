@@ -21,12 +21,51 @@ well-formed result that is quietly wrong.
 
 ---
 
+## What a version covers
+
+A version is **everything that can change the numbers without changing the question**:
+
+| Versioned | Why |
+|---|---|
+| `agents/vN/` | The search implementations themselves |
+| `evaluation/vN/` | Evaluators are shared by three agents via injection; editing one in place would silently alter frozen v1 behaviour |
+| **Hyperparameters** — caps, rollout parameters | See below. These used to live in the harness, which made them un-versionable |
+
+**Deliberately NOT versioned:**
+
+- `games/` — the rules define the *question*, not the answer. If a rule changes, it is
+  not a new agent version, it is a different experiment and every previous result is
+  void rather than comparable.
+- `experiments/` — the harness measures; it does not play. A harness change affects how
+  results are recorded, not what the agents do.
+
+### Hyperparameters belong to the version, not the harness
+
+In v1, `MCTS_ROLLOUT` and `CAPS` lived as constants in `experiments/tournament.py`. That
+is the wrong home: they are **properties of an agent**, and leaving them in the harness
+means two versions cannot declare different ones. It is also what made defect D4
+possible - the tournament silently ran defaults the calibration had ranked worst.
+
+From v2 onward each version package declares its own:
+
+```python
+# agents/v2/__init__.py
+VERSION = "v2"
+CAPS = {"max_entries": 200000, "max_nodes": 50000}
+MCTS_ROLLOUT = {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10}
+```
+
+The harness asks the version package for its agents and records what it was given.
+
 ## Layout
 
 ```
 agents/          alpha_beta_agent.py, mcts_agent.py, ...   <- v1. FROZEN. Do not touch.
-agents/v2/       alpha_beta_agent.py, mcts_agent.py, ...   <- the V2 run
-agents/v3/       alpha_beta_agent.py, mcts_agent.py, ...   <- the V3 run
+agents/v2/       __init__.py + the four agents             <- the V2 run
+agents/v3/       __init__.py + the four agents             <- the V3 run
+evaluation/      isolation_eval.py, ...                    <- v1. FROZEN.
+evaluation/v2/   isolation_eval.py, ...
+evaluation/v3/   isolation_eval.py, ...
 ```
 
 Each versioned module declares its own version:
