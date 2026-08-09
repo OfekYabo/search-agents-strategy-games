@@ -11,6 +11,12 @@ RAW=$DIR/results/v2
 LOG=$DIR/results/tournament.log
 TOTAL=2700
 
+# What this run is SUPPOSED to be. Checked against three independent places
+# below, because the version is invisible at the point you type
+# `systemctl start` - it is baked into the unit's ExecStart - and finding out
+# after ten hours that the wrong agents ran is the expensive way to learn it.
+EXPECT_VERSION=v2
+
 # Games are only counted once their commit marker (the games.csv row) is
 # durable, so this never over-reports work that a crash would discard.
 if [ -f "$RAW/games.csv" ]; then
@@ -33,6 +39,53 @@ echo " TOURNAMENT STATUS            $(date '+%Y-%m-%d %H:%M:%S %Z')"
 echo "=============================================================="
 echo " service : $STATE ($ENABLED)   restarts: $NRESTARTS   result: $RESULT"
 echo " started : $START"
+
+# ---- which agent version is actually running ------------------------
+# Three independent sources. The unit says what was configured, run_meta
+# says what the process recorded at startup, and games.csv says what the
+# finished games were actually played with. Agreement is the check.
+UNIT_VERSION=$(systemctl cat tournament 2>/dev/null \
+    | sed -n 's/.*--agent-version[= ]\([^ ]*\).*/\1/p' | head -1)
+[ -z "$UNIT_VERSION" ] && UNIT_VERSION="v1(default)"
+
+META_VERSION="-"
+[ -f "$RAW/run_meta.json" ] && META_VERSION=$(python3 -c \
+    "import json,sys;print(json.load(open(sys.argv[1]))['agent_version'])" \
+    "$RAW/run_meta.json" 2>/dev/null || echo "?")
+
+DATA_VERSION="-"
+if [ -f "$RAW/games.csv" ]; then
+    DATA_VERSION=$(python3 -c "
+import csv, sys
+rows = list(csv.DictReader(open(sys.argv[1])))
+seen = sorted({(r.get('agent_first_version') or 'v1') for r in rows}
+              | {(r.get('agent_second_version') or 'v1') for r in rows})
+print(','.join(seen) if seen else '-')" "$RAW/games.csv" 2>/dev/null || echo "?")
+fi
+
+echo " version : unit=$UNIT_VERSION  recorded=$META_VERSION  in data=$DATA_VERSION   (expect $EXPECT_VERSION)"
+echo " output  : $RAW"
+
+VERSION_BAD=""
+case "$UNIT_VERSION" in
+    "$EXPECT_VERSION") ;;
+    *) VERSION_BAD="unit says $UNIT_VERSION" ;;
+esac
+[ "$META_VERSION" != "-" ] && [ "$META_VERSION" != "$EXPECT_VERSION" ] \
+    && VERSION_BAD="$VERSION_BAD; run_meta says $META_VERSION"
+[ "$DATA_VERSION" != "-" ] && [ "$DATA_VERSION" != "$EXPECT_VERSION" ] \
+    && VERSION_BAD="$VERSION_BAD; games.csv says $DATA_VERSION"
+
+if [ -n "$VERSION_BAD" ]; then
+    echo
+    echo " >>> WRONG AGENT VERSION: $VERSION_BAD"
+    echo "     Expected $EXPECT_VERSION. STOP NOW rather than spend ten hours"
+    echo "     measuring the wrong agents:"
+    echo "       sudo systemctl stop tournament"
+    echo "     Then check ExecStart in /etc/systemd/system/tournament.service,"
+    echo "     and delete $RAW before restarting - a resumed run would keep the"
+    echo "     games already played with the wrong version."
+fi
 echo " uptime  : $(uptime -p)   load:$(cut -d' ' -f1-3 /proc/loadavg | sed 's/^/ /')"
 echo
 

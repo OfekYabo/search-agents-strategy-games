@@ -13,6 +13,10 @@ Ubuntu 22.04, Python 3.10.12) · **Branch:** `plan-refinement`
 
 ---
 
+> **Launching a new run?** `LAUNCH.md` is the step-by-step version of this,
+> written for PowerShell with no terminal available. It also explains how the
+> run knows which agent version to use.
+
 ## 1. The one command that matters
 
 From **Windows PowerShell**, no SSH, no VS Code:
