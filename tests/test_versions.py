@@ -28,5 +28,43 @@ class EvaluatorVersionTest(unittest.TestCase):
                     game.legal_moves(state)))
 
 
+class VersionIntegrityTest(unittest.TestCase):
+    def test_every_version_package_tags_itself_with_its_directory(self):
+        """A clone with a stale tag inside it produces a run labelled as
+        something it is not. Cheap to check, expensive to discover later."""
+        import importlib
+        for name in ("v2", "v3"):
+            for package in ("agents", "evaluation"):
+                module = importlib.import_module("%s.%s" % (package, name))
+                self.assertEqual(module.VERSION, name,
+                                 "%s.%s declares %r" % (package, name,
+                                                        module.VERSION))
+
+    def test_v3_starts_as_a_faithful_clone_of_v2(self):
+        """v3 is the next version to be improved. Until someone changes it, it
+        must behave exactly like v2, or the first comparison will measure a
+        transcription error rather than an improvement."""
+        import random
+        from agents import v2, v3, base
+        from evaluation.v2 import isolation_eval as e2
+        from evaluation.v3 import isolation_eval as e3
+        from games import isolation
+        self.assertEqual(v2.AGENTS, v3.AGENTS)
+        self.assertEqual(v2.CAPS, v3.CAPS)
+        self.assertEqual(v2.MCTS_ROLLOUT, v3.MCTS_ROLLOUT)
+        a2 = v2.build("heuristic", e2.evaluate)
+        a3 = v3.build("heuristic", e3.evaluate)
+        state = isolation.initial_state()
+        for _ in range(8):
+            if isolation.is_terminal(state):
+                break
+            m2 = a2(isolation, state, base.SearchContext(0.1, 50000),
+                    random.Random(3))
+            m3 = a3(isolation, state, base.SearchContext(0.1, 50000),
+                    random.Random(3))
+            self.assertEqual(m2, m3)
+            state = isolation.apply_move(state, m2)
+
+
 if __name__ == "__main__":
     unittest.main()
