@@ -534,7 +534,23 @@ labelled as something it is not."
 **Interfaces:**
 - `tournament.agent_source(version)` returns the version package, or a v1 shim exposing the same `AGENTS`/`build`/`params`/`VERSION` surface.
 - `tournament.write_run_meta(path, version, games, configs, trials, schedule_size)` writes/updates `run_meta.json`.
-- `games.csv` gains `agent_first_version`, `agent_second_version` as the final two columns.
+- `games.csv` gains four columns at the end: `agent_first_version`, `agent_second_version`, `agent_first_params`, `agent_second_params`.
+
+**Why the params go in the CSV and not only in `run_meta.json`.** `run_meta` holds one
+roster for the whole run, which is enough for a grid run where every game uses the same
+agents. It is **not** enough for the v2-versus-v3 comparison run, where two agents with
+*different* hyperparameters play each other in the same game — a single roster cannot say
+which epsilon belonged to which side. Per-agent, per-game columns can, and they also
+survive the metadata file being lost or overwritten.
+
+`max_nodes` and `max_entries` already exist in `games.csv`, but as one config-level pair
+per row rather than per agent, so they cannot express two agents with different caps
+either. The new columns supersede them for that purpose; the old two stay where they are
+so no existing column position moves.
+
+Params are written as a compact JSON object with sorted keys, e.g.
+`{"epsilon": 1.0, "max_nodes": 50000, "rollout_depth": 10, "sample_k": 1}`. Sorted so the
+CSV stays byte-deterministic; JSON so the shape does not have to be guessed back.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -600,14 +616,20 @@ Append to `tests/test_logger.py`:
 
 ```python
 class VersionColumnTest(unittest.TestCase):
-    def test_games_csv_carries_the_agent_versions(self):
-        import csv
-        import os
-        import tempfile
+    def test_games_csv_carries_the_agent_versions_and_params(self):
         from experiments import logger as logger_module
-        directory = tempfile.mkdtemp()
-        self.assertIn("agent_first_version", logger_module.GAME_COLUMNS)
-        self.assertIn("agent_second_version", logger_module.GAME_COLUMNS)
+        for column in ("agent_first_version", "agent_second_version",
+                       "agent_first_params", "agent_second_params"):
+            self.assertIn(column, logger_module.GAME_COLUMNS)
+
+    def test_the_new_columns_are_appended_not_inserted(self):
+        """Existing column positions must not move, or every tool that reads
+        these CSVs by position breaks on old files."""
+        from experiments import logger as logger_module
+        self.assertEqual(logger_module.GAME_COLUMNS[:13], [
+            "game_id", "game", "config", "time_budget_s", "max_nodes",
+            "max_entries", "agent_first", "agent_second", "winner", "plies",
+            "end_reason", "seed", "workers"])
 ```
 
 - [ ] **Step 2: Run and verify they fail**
@@ -770,10 +792,39 @@ and before `run(...)`:
 
 - [ ] **Step 6: Add the CSV columns**
 
-In `experiments/logger.py`, append `"agent_first_version"` and `"agent_second_version"`
-to `GAME_COLUMNS` **at the end**, so existing column positions do not move. In
-`experiments/runner.py`, accept `agent_versions=("v1", "v1")` in `play_game` and place
-both values on the game record.
+In `experiments/logger.py`, append these four to `GAME_COLUMNS` **at the end**, so
+existing column positions do not move:
+
+```python
+    "agent_first_version", "agent_second_version",
+    "agent_first_params", "agent_second_params",
+```
+
+In `experiments/runner.py`, accept `agent_versions=("v1", "v1")` and
+`agent_params=({}, {})` in `play_game`, and place all four on the game record. Serialise
+the params where they are written, so the record carries plain data:
+
+```python
+import json
+...
+        agent_first_params=json.dumps(agent_params[0], sort_keys=True),
+        agent_second_params=json.dumps(agent_params[1], sort_keys=True),
+```
+
+Sorted keys keep the CSV byte-deterministic across runs.
+
+In `tournament.py`'s loop, pass what the version actually gave each agent:
+
+```python
+        agents = (source.build(cell.agent_first, evaluate),
+                  source.build(cell.agent_second, evaluate))
+        record = runner.play_game(
+            game, agents, (cell.agent_first, cell.agent_second), config, seed,
+            ply_cap=300, trial=cell.trial, workers=workers,
+            agent_versions=(version, version),
+            agent_params=(source.params(cell.agent_first),
+                          source.params(cell.agent_second)))
+```
 
 - [ ] **Step 7: Run the tests and verify they pass**
 
@@ -850,6 +901,53 @@ class AgentVersionMetaTest(unittest.TestCase):
                   "plies": "12", "end_reason": "eliminated"}]
         meta = analyse.build_analysis(games, [], label="x")["meta"]
         self.assertEqual(meta["agent_versions"], ["v1"])
+
+    def test_roster_is_read_from_the_csv_not_guessed(self):
+        """The hyperparameters must come from the data. run_meta holds one
+        roster for a whole run and cannot describe a comparison run where two
+        agents carry different parameters in the same game."""
+        games = [{"game_id": "g1", "game": "ataxx", "config": "hard",
+                  "time_budget_s": "0.1", "agent_first": "mcts",
+                  "agent_second": "heuristic", "winner": "second",
+                  "plies": "12", "end_reason": "eliminated",
+                  "agent_first_version": "v2", "agent_second_version": "v2",
+                  "agent_first_params": '{"epsilon": 1.0, "sample_k": 1}',
+                  "agent_second_params": "{}"}]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertEqual(meta["roster"]["mcts@v2"], {"epsilon": 1.0,
+                                                     "sample_k": 1})
+        self.assertEqual(meta["roster"]["heuristic@v2"], {})
+
+    def test_two_versions_of_one_agent_keep_separate_parameters(self):
+        """The case run_meta cannot express: same label, two versions, two
+        parameter sets, in the same run."""
+        base = {"game": "ataxx", "config": "hard", "time_budget_s": "0.1",
+                "winner": "first", "plies": "9", "end_reason": "eliminated"}
+        games = [dict(base, game_id="g1", agent_first="mcts",
+                      agent_second="mcts",
+                      agent_first_version="v2", agent_second_version="v3",
+                      agent_first_params='{"epsilon": 1.0}',
+                      agent_second_params='{"epsilon": 0.8}')]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertEqual(meta["roster"]["mcts@v2"], {"epsilon": 1.0})
+        self.assertEqual(meta["roster"]["mcts@v3"], {"epsilon": 0.8})
+
+    def test_conflicting_parameters_for_one_agent_version_are_flagged(self):
+        """If the same agent at the same version shows two parameter sets in
+        one run, something is wrong and it must not be silently averaged
+        away."""
+        base = {"game": "ataxx", "config": "hard", "time_budget_s": "0.1",
+                "winner": "first", "plies": "9", "end_reason": "eliminated",
+                "agent_second": "random", "agent_second_version": "v2",
+                "agent_second_params": "{}"}
+        games = [dict(base, game_id="g1", agent_first="mcts",
+                      agent_first_version="v2",
+                      agent_first_params='{"epsilon": 1.0}'),
+                 dict(base, game_id="g2", agent_first="mcts",
+                      agent_first_version="v2",
+                      agent_first_params='{"epsilon": 0.5}')]
+        meta = analyse.build_analysis(games, [], label="x")["meta"]
+        self.assertIn("mcts@v2", meta["roster_conflicts"])
 ```
 
 Append to `tests/test_report.py`:
@@ -874,31 +972,88 @@ Expected: FAIL on `KeyError: 'agent_versions'`.
 
 - [ ] **Step 3: Implement**
 
-In `analyse.py`'s `build_analysis`, add to `meta`:
+Add to `analyse.py`:
+
+```python
+def roster_from_games(rows):
+    # type: (List[Dict[str, Any]]) -> Tuple[Dict[str, Any], List[str]]
+    """Agent hyperparameters, read from the CSV rather than from a metadata
+    file or a document.
+
+    Keyed `label@version`, because the whole point is the case a single
+    run-level roster cannot express: the same agent label at two versions,
+    with different parameters, inside one run. That is exactly what a
+    version-comparison run looks like.
+
+    Returns the roster and a sorted list of keys that showed conflicting
+    parameters. A conflict means the run is not what it claims to be, so it is
+    surfaced rather than resolved by picking one.
+    """
+    import json
+    roster = {}
+    conflicts = set()
+    for row in rows:
+        for side in ("first", "second"):
+            label = row.get("agent_%s" % side)
+            if not label:
+                continue
+            version = row.get("agent_%s_version" % side) or "v1"
+            raw = row.get("agent_%s_params" % side)
+            if raw in (None, ""):
+                continue
+            try:
+                params = json.loads(raw)
+            except ValueError:
+                continue
+            key = "%s@%s" % (label, version)
+            if key in roster and roster[key] != params:
+                conflicts.add(key)
+            roster[key] = params
+    return roster, sorted(conflicts)
+```
+
+and in `build_analysis`, before assembling `doc`:
+
+```python
+    roster, roster_conflicts = roster_from_games(games_rows)
+```
+
+then add to `meta`:
 
 ```python
             "agent_versions": sorted(set(
                 [r.get("agent_first_version") or "v1" for r in games_rows]
                 + [r.get("agent_second_version") or "v1"
                    for r in games_rows])),
+            "roster": roster,
+            "roster_conflicts": roster_conflicts,
 ```
 
-In `report.py`'s section 2, after the reconstructed/not-recorded note, add a roster table
-when `run_meta` carries one:
+In `report.py`'s section 2, render the roster from **`analysis.json`** — that is the copy
+derived from the CSVs — rather than from `run_meta`, which is a claim about the run rather
+than a record of it:
 
 ```python
-        roster = run_meta.get("roster") or {}
-        if roster:
-            parts.append("\n**Agent version %s - roster and hyperparameters**\n"
-                         % run_meta.get("agent_version", "?"))
-            parts.append(_table(
-                ["agent", "hyperparameters"],
-                [[label, _plain(roster[label]) or "-"]
-                 for label in sorted(roster)]))
+    roster = meta.get("roster") or {}
+    if roster:
+        parts.append("\n**Agent roster and hyperparameters**, read from "
+                     "`games.csv` rather than from metadata, so it describes "
+                     "what actually ran\n")
+        parts.append(_table(
+            ["agent", "version", "hyperparameters"],
+            [[key.split("@")[0], key.split("@")[1],
+              _plain(roster[key]) if roster[key] else "-"]
+             for key in sorted(roster)]))
+    for key in meta.get("roster_conflicts") or []:
+        parts.append("\n> **WARNING: %s ran with more than one set of "
+                     "hyperparameters in this run.** The run is not what it "
+                     "claims to be; do not compare these results until it is "
+                     "explained.\n" % key)
 ```
 
-and exclude `roster` from the generic property table by extending the skip list from
-`if key != "source"` to `if key not in ("source", "roster", "starts")`.
+Exclude the run-level bookkeeping from the generic `run_meta` property table by extending
+the skip list from `if key != "source"` to
+`if key not in ("source", "roster", "starts")`.
 
 - [ ] **Step 4: Run the tests and verify they pass**
 
@@ -1020,3 +1175,37 @@ the report's existing branch on it.
 `evaluate` attribute; `_Evaluator` adapts the function-based interface to it. If
 `_make_agent`'s signature differs, adapt the shim rather than changing `_make_agent` —
 v1's construction path must not move.
+
+## Requirements audit
+
+Every request made about V2, and where it is covered.
+
+| Requirement | Task | Note |
+|---|---|---|
+| Version tag on each agent, v2 and v3 | T2, T3 | v1 deliberately untagged; missing tag reads as v1 |
+| Tag recorded correctly in the report | T5 | From `games.csv`, not from docs |
+| Clone each agent to v2 and v3 files | T2, T3 | With "identical to v1, not yet changed" comments |
+| Evaluators versioned too | T1 | Injected into three agents; editing in place would alter v1 |
+| **Hyperparameters logged to the CSV** | **T4 step 6** | **Per agent, per game, as sorted JSON** |
+| Analysis reads params from data, not docs | T5 | `roster_from_games`, keyed `label@version` |
+| 25 trials | T6 | 2700 games, ~9.9 h |
+| Same trials for every game | T6 | Uniform; the non-uniform option was declined |
+| Isolation-hard stays at 0.02 s | — | No change made |
+| Isolation heuristic considered | T2 | Became a defect fix, not a tuning change |
+| Tournament records its own configuration | T4 | `run_meta.json`, written at startup |
+| v1 stays frozen and reproducible | T4 step 8, T5 step 5 | Default version is v1; v1 report must regenerate byte-identically |
+
+### Deferred deliberately, recorded so they are not lost
+
+1. **The version-comparison run** (`mcts_v2` against `mcts_v3`). `--agent-version` is
+   single-valued, so the harness **cannot yet run two versions against each other**. This
+   is fine — v3 does not differ from v2 yet, so there is nothing to compare — but it is
+   work that must happen before that comparison. The CSV params columns added here are
+   what will make the result analysable when it does.
+2. **The Ataxx crossover run** (MCTS vs heuristic at 2/5/10 s, ~3.7 h) to find where MCTS
+   overtakes the one-ply agent. To be run after the final agent version, before the
+   report is finished.
+3. **Recording the evaluator version separately from the agent version.** The tournament
+   ties them — `agent_source(v)` and `evaluator_source(v, game)` take the same string — so
+   one field describes both. If they are ever allowed to differ, the CSV needs a second
+   column.
