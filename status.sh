@@ -3,13 +3,13 @@
 #
 #   multipass exec tournament -- /home/ubuntu/search-agents-strategy-games/status.sh
 #
-# Prints service state, progress toward 2160 games, throughput, ETA, and
+# Prints service state, progress toward 2700 games, throughput, ETA, and
 # explicit STALL / RESTART-LOOP verdicts so no interpretation is needed.
 
 DIR=/home/ubuntu/search-agents-strategy-games
-RAW=$DIR/results/raw
+RAW=$DIR/results/v2
 LOG=$DIR/results/tournament.log
-TOTAL=2160
+TOTAL=2700
 
 # Games are only counted once their commit marker (the games.csv row) is
 # durable, so this never over-reports work that a crash would discard.
@@ -62,7 +62,7 @@ elif [ "$STATE" = "active" ] && [ "$ELAPSED" -gt 60 ] && [ "$DONE" -gt 0 ]; then
     ETAH=$(awk "BEGIN{printf \"%.1f\", $LEFT*$ELAPSED/($DONE*3600)}")
     echo " rate    : $RATE games/h over $(( ELAPSED / 60 )) min   ETA: ~${ETAH} h  ($LEFT left)"
     echo "           NOTE: early games are Isolation (fast). Rate will FALL as the"
-    echo "           schedule reaches UTTT and Ataxx. Expect ~8.6 h total, not the"
+    echo "           schedule reaches UTTT and Ataxx. Expect ~9.9 h total, not the"
     echo "           first-hour extrapolation."
 fi
 echo " last write to games.csv: ${AGE}s ago"
@@ -72,7 +72,11 @@ echo
 VERDICT="OK"
 if [ "$DONE" -ge "$TOTAL" ]; then
     echo " >>> COMPLETE. All $TOTAL games present. Next step: run the analysis."
-    echo "     python3 -m experiments.analyse --raw results/raw | tee results/tables.md"
+    echo "     python3 -m experiments.analyse --raw results/v2 \\"
+echo "             --json results/v2/analysis.json --label v2-tournament"
+echo "     python3 -m experiments.report --analysis results/v2/analysis.json \\"
+echo "             --out results/v2/report.md --figures results/v2/figures \\"
+echo "             --run-meta results/v2/run_meta.json"
     VERDICT="DONE"
 elif [ "$STATE" = "failed" ]; then
     echo " >>> FAILED. The unit gave up (likely start-limit-hit: 5 crashes in 10 min)."

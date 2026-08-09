@@ -4,8 +4,12 @@ You are picking this up after a gap, probably with no agent available.
 Everything you need is on this page. `docs/RUNBOOK.md` has the reasoning;
 this page has the actions.
 
-**Date set up:** 2026-08-07 · **VM:** Multipass `tournament` (4 vCPU / 4 GB,
-Ubuntu 22.04, Python 3.10.12) · **Branch:** `plan-refinement` · **Tag:** `v1-tournament`
+**Date set up:** 2026-08-10 (V2) · **VM:** Multipass `tournament` (4 vCPU / 4 GB,
+Ubuntu 22.04, Python 3.10.12) · **Branch:** `plan-refinement`
+
+> **This page now describes the V2 run.** V1 is finished and published: its data is
+> at `results/raw`, its report at `results/report.md`, tagged `v1-tournament`.
+> **Nothing in this run touches either.**
 
 ---
 
@@ -30,17 +34,25 @@ It survives SSH disconnect, VS Code closing, and VM reboot (it is `enabled`).
 
 ```
 ExecStart=/usr/bin/python3 -m experiments.tournament \
-          --games all --configs all --trials 20 --out results/raw
+          --games all --configs all --trials 25 \
+          --agent-version v2 --out results/v2
 ```
 
-- **Grid:** 3 games x 12 directed matchups x 3 configs x 20 trials = **2160 games**
-- **Expected duration:** **~8.6 h** (Isolation 0.24 h, UTTT 3.71 h, Ataxx 3.85 h)
-- **Output:** `results/raw/games.csv`, `results/raw/moves.csv`
+- **Grid:** 3 games x 12 directed matchups x 3 configs x **25 trials** = **2700 games**
+- **Agents:** version **v2** (`agents/v2/`, `evaluation/v2/`)
+- **Expected duration:** **~9.9 h**. V1 measured 7.94 h of search against 7.93 h
+  wall clock, so the run is essentially all search and scales linearly with trials.
+- **Output:** `results/v2/games.csv`, `results/v2/moves.csv`, `results/v2/run_meta.json`
 - **Log:** `results/tournament.log`
 - **Unit file:** `/etc/systemd/system/tournament.service`
 
 > **The 21 h figure in older notes is wrong.** It used random self-play game
-> lengths (182.6 plies on Ataxx); real agent play is 45.0 plies. 8.6 h is correct.
+> lengths (182.6 plies on Ataxx); real agent play is 39.0. ~9.9 h is correct for V2.
+
+> **What changed in v2:** the one-ply heuristic agent no longer declines an
+> immediate win. v1 declined one in 28.0% of such positions on Isolation, 11.6% on
+> UTTT and 3.2% on Ataxx, which is why its Isolation heuristic scored only 0.750
+> against the random agent. Everything else is byte-identical to v1.
 
 ### If it was never started
 
@@ -62,7 +74,7 @@ is the command you want.
 multipass exec tournament -- /home/ubuntu/search-agents-strategy-games/status.sh
 
 # bare game count, if you want just a number
-multipass exec tournament -- bash -c "wc -l < search-agents-strategy-games/results/raw/games.csv"
+multipass exec tournament -- bash -c "wc -l < search-agents-strategy-games/results/v2/games.csv"
 
 # live log tail
 multipass exec tournament -- tail -20 /home/ubuntu/search-agents-strategy-games/results/tournament.log
@@ -148,19 +160,18 @@ multipass start tournament     # the service is `enabled`, so it auto-resumes on
 
 ## 6. When it finishes
 
-`status.sh` prints `COMPLETE` at 2160/2160. Then:
-
-```powershell
-multipass exec tournament -- bash -c "cd search-agents-strategy-games && python3 -m experiments.analyse --raw results/raw | tee results/tables.md"
-```
-
-Then generate the report — tables, figures and all:
+`status.sh` prints `COMPLETE` at 2700/2700. Then:
 
 ```bash
-python3 -m experiments.analyse --raw results/raw \
-        --json results/analysis.json --label <tag>
-python3 -m experiments.report --analysis results/analysis.json
+python3 -m experiments.analyse --raw results/v2 \
+        --json results/v2/analysis.json --label v2-tournament \
+        | tee results/v2/tables.md
+python3 -m experiments.report --analysis results/v2/analysis.json \
+        --out results/v2/report.md --figures results/v2/figures \
+        --run-meta results/v2/run_meta.json
 ```
+
+Everything writes under `results/v2`, so V1's data and report are untouched.
 
 This needs `matplotlib` and `numpy` (`requirements-analysis.txt`), which the
 tournament itself does not. Output is `results/report.md` plus
