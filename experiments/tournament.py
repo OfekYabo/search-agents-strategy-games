@@ -103,17 +103,136 @@ def _make_agent(name, ev):
     raise ValueError("unknown agent %r" % (name,))
 
 
-def run(schedule, out_dir, workers=1, resume=True):
+class _Evaluator(object):
+    """_make_agent takes a module with an `evaluate` attribute; the versioned
+    interface passes the function itself. Adapts one to the other."""
+
+    def __init__(self, evaluate):
+        self.evaluate = evaluate
+
+
+class _V1Source(object):
+    """Exposes v1's inline agent construction under the same interface the
+    versioned packages provide, so the tournament has one code path.
+
+    v1 has no package of its own and must not grow one: it is frozen, and its
+    hyperparameters living here in the harness is exactly the mistake the
+    versioned packages exist to correct. This shim reads them rather than
+    moving them.
+    """
+
+    VERSION = "v1"
+    AGENTS = AGENTS
+
+    @staticmethod
+    def build(label, evaluate):
+        return _make_agent(label, _Evaluator(evaluate))
+
+    @staticmethod
+    def params(label):
+        if label == "alpha_beta":
+            return {"max_entries": CAPS["max_entries"]}
+        if label == "mcts":
+            out = {"max_nodes": CAPS["max_nodes"]}
+            out.update(MCTS_ROLLOUT)
+            return out
+        return {}
+
+
+def agent_source(version):
+    # type: (str) -> Any
+    """The package supplying agents for `version`, or the v1 shim."""
+    if version == "v1":
+        return _V1Source
+    if version == "v2":
+        from agents import v2
+        return v2
+    if version == "v3":
+        from agents import v3
+        return v3
+    raise ValueError("unknown agent version %r" % (version,))
+
+
+def evaluator_source(version, game):
+    # type: (str, str) -> Any
+    """Evaluators are versioned alongside agents and always move together, so
+    one version string describes both."""
+    if version == "v1":
+        return _evaluator(game)
+    package = __import__("evaluation.%s" % version, fromlist=["x"])
+    return getattr(package, "%s_eval" % game)
+
+
+def write_run_meta(path, version, games, configs, trials, schedule_size):
+    # type: (str, str, tuple, tuple, int, int) -> None
+    """Record what this run is, at startup.
+
+    The v1 run could not say from its own data which rollout parameters
+    produced it - they lived only as a constant in this file. That gap caused
+    defect D4 and forced the rewrite of finding F3.
+
+    A restart appends to `starts` rather than clobbering, so a resumed run
+    keeps the history of every attempt instead of only the last one.
+    """
+    import json
+    import platform
+    import subprocess
+
+    source = agent_source(version)
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            stderr=subprocess.STDOUT).decode().strip()
+    except Exception:
+        commit = "unknown"
+
+    start = {"python": sys.version.split()[0],
+             "platform": platform.platform(),
+             "commit": commit}
+
+    existing = {}
+    if os.path.exists(path):
+        try:
+            with open(path) as handle:
+                existing = json.load(handle)
+        except ValueError:
+            existing = {}
+
+    meta = {
+        "source": "recorded",
+        "agent_version": version,
+        "games": list(games),
+        "configs": list(configs),
+        "trials": trials,
+        "schedule_size": schedule_size,
+        "budgets": dict((g, dict(BUDGETS[g])) for g in games),
+        "roster": dict((label, source.params(label))
+                       for label in source.AGENTS),
+        "python": start["python"],
+        "platform": start["platform"],
+        "commit": commit,
+        "starts": existing.get("starts", []) + [start],
+    }
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(path, "w") as handle:
+        json.dump(meta, handle, sort_keys=True, indent=2)
+        handle.write("\n")
+
+
+def run(schedule, out_dir, workers=1, resume=True, version="v1"):
     # type: (List[Cell], str, int, bool) -> int
     games_path = os.path.join(out_dir, "games.csv")
     moves_path = os.path.join(out_dir, "moves.csv")
     logger = GameLogger(games_path, moves_path)
     done = logger.completed_ids() if resume else set()
 
+    source = agent_source(version)
     played = 0
     for index, cell in enumerate(schedule):
         game = _game_module(cell.game)
-        ev = _evaluator(cell.game)
+        ev = evaluator_source(version, cell.game)
         budget = BUDGETS[cell.game][cell.config]
         config = {"name": cell.config, "time_budget_s": budget,
                   "max_nodes": CAPS["max_nodes"],
@@ -126,11 +245,14 @@ def run(schedule, out_dir, workers=1, resume=True):
                                    cell.agent_second, cell.config, cell.trial)
         if record_id in done:
             continue
-        agents = (_make_agent(cell.agent_first, ev),
-                  _make_agent(cell.agent_second, ev))
+        agents = (source.build(cell.agent_first, ev.evaluate),
+                  source.build(cell.agent_second, ev.evaluate))
         record = runner.play_game(
             game, agents, (cell.agent_first, cell.agent_second), config, seed,
-            ply_cap=300, trial=cell.trial, workers=workers)
+            ply_cap=300, trial=cell.trial, workers=workers,
+            agent_versions=(version, version),
+            agent_params=(source.params(cell.agent_first),
+                          source.params(cell.agent_second)))
         logger.write(record)
         played += 1
         if played % 20 == 0:
@@ -148,6 +270,8 @@ def main(argv=None):
     parser.add_argument("--out", default="results/raw")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--no-resume", action="store_true")
+    parser.add_argument("--agent-version", dest="agent_version",
+                        default="v1")
     args = parser.parse_args(argv)
 
     games = (("isolation", "uttt", "ataxx") if args.games == "all"
@@ -156,8 +280,11 @@ def main(argv=None):
                else tuple(args.configs.split(",")))
     schedule = build_schedule(games, configs, args.trials)
     print("scheduled %d games across %d matchups" % (len(schedule), 12))
+    write_run_meta(os.path.join(args.out, "run_meta.json"),
+                   args.agent_version, games, configs, args.trials,
+                   len(schedule))
     played = run(schedule, args.out, workers=args.workers,
-                 resume=not args.no_resume)
+                 resume=not args.no_resume, version=args.agent_version)
     print("played %d games (rest already present)" % played)
     return 0
 

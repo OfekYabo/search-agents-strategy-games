@@ -1,5 +1,6 @@
 """Plays one game between two agents and records everything about it."""
 import hashlib
+import json
 import random
 from dataclasses import dataclass, field
 from typing import Any, List, Optional, Tuple
@@ -37,6 +38,14 @@ class GameRecord:
     seed: int
     workers: int
     max_entries: int = 0
+    # Version and hyperparameters per agent, per game. run_meta.json holds
+    # one roster for a whole run, which cannot describe a comparison run
+    # where two versions of one agent carry different parameters in the
+    # same game - these columns can.
+    agent_first_version: str = "v1"
+    agent_second_version: str = "v1"
+    agent_first_params: str = "{}"
+    agent_second_params: str = "{}"
     moves: List[MoveRecord] = field(default_factory=list)
 
 
@@ -59,7 +68,8 @@ def game_id(game_name, agent_a, agent_b, config_name, trial):
 
 
 def play_game(game, agents, agent_names, config, seed, ply_cap=None,
-              trial=0, workers=1, clock=None):
+              trial=0, workers=1, clock=None, agent_versions=None,
+              agent_params=None):
     # type: (Any, Tuple[Any, Any], Tuple[str, str], dict, int, Optional[int], int, int, Any) -> GameRecord
     """Play one complete game. Fully determined by `seed`.
 
@@ -146,6 +156,9 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
 
     winner = _winner(game, state, end_reason)
 
+    # Sorted keys keep the CSV byte-deterministic across runs.
+    versions = agent_versions or ("v1", "v1")
+    params = agent_params or ({}, {})
     return GameRecord(
         game_id=game_id(game.NAME, agent_names[0], agent_names[1],
                         config["name"], trial),
@@ -161,6 +174,10 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
         seed=seed,
         workers=workers,
         max_entries=config.get("max_entries", 0),
+        agent_first_version=versions[0],
+        agent_second_version=versions[1],
+        agent_first_params=json.dumps(params[0], sort_keys=True),
+        agent_second_params=json.dumps(params[1], sort_keys=True),
         moves=moves,
     )
 

@@ -12,6 +12,12 @@ GAME_COLUMNS = [
     "game_id", "game", "config", "time_budget_s", "max_nodes", "max_entries",
     "agent_first", "agent_second", "winner", "plies", "end_reason",
     "seed", "workers",
+    # Appended, never inserted: moving an existing column would break every
+    # reader of the v1 CSVs. max_nodes and max_entries above are config-level
+    # values, one pair per row, so they cannot express two agents with
+    # different caps - these can, and carry the rollout parameters too.
+    "agent_first_version", "agent_second_version",
+    "agent_first_params", "agent_second_params",
 ]
 
 # nodes and simulations are deliberately separate: an Alpha-Beta node is a
@@ -140,6 +146,10 @@ class GameLogger:
             "end_reason": record.end_reason,
             "seed": record.seed,
             "workers": record.workers,
+            "agent_first_version": record.agent_first_version,
+            "agent_second_version": record.agent_second_version,
+            "agent_first_params": record.agent_first_params,
+            "agent_second_params": record.agent_second_params,
         })
         self._games_file.flush()
 

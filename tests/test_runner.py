@@ -414,5 +414,68 @@ class CrashDurabilityTest(unittest.TestCase):
         self.assertEqual(len(moves), record.plies)
 
 
+
+class VersionColumnTest(unittest.TestCase):
+    def test_games_csv_carries_the_agent_versions_and_params(self):
+        from experiments import logger as logger_module
+        for column in ("agent_first_version", "agent_second_version",
+                       "agent_first_params", "agent_second_params"):
+            self.assertIn(column, logger_module.GAME_COLUMNS)
+
+    def test_the_new_columns_are_appended_not_inserted(self):
+        """Existing column positions must not move, or every tool reading the
+        v1 CSVs by position breaks on the old files."""
+        from experiments import logger as logger_module
+        self.assertEqual(logger_module.GAME_COLUMNS[:13], [
+            "game_id", "game", "config", "time_budget_s", "max_nodes",
+            "max_entries", "agent_first", "agent_second", "winner", "plies",
+            "end_reason", "seed", "workers"])
+
+    def test_play_game_defaults_to_v1_with_empty_params(self):
+        """An existing caller that passes no version must still work, and must
+        produce v1 rows rather than blank ones."""
+        from games import isolation
+        from agents import random_agent
+        record = runner.play_game(
+            isolation, (random_agent.choose, random_agent.choose),
+            ("random", "random"),
+            {"name": "hard", "time_budget_s": 0.02, "max_nodes": 50000,
+             "max_entries": 200000}, seed=1, ply_cap=50)
+        self.assertEqual(record.agent_first_version, "v1")
+        self.assertEqual(record.agent_first_params, "{}")
+
+class EveryColumnIsWrittenTest(unittest.TestCase):
+    def test_no_declared_game_column_is_left_blank(self):
+        """A column can be declared in GAME_COLUMNS and never populated by
+        write(), producing a well-formed CSV with a silently empty column -
+        the same shape of defect as D9. Adding a field to GameRecord is not
+        enough; the logger maps fields explicitly."""
+        import csv
+        import os
+        import tempfile
+        from experiments.logger import GameLogger, GAME_COLUMNS
+        from games import isolation
+        from agents import random_agent
+
+        record = runner.play_game(
+            isolation, (random_agent.choose, random_agent.choose),
+            ("random", "random"),
+            {"name": "hard", "time_budget_s": 0.02, "max_nodes": 50000,
+             "max_entries": 200000}, seed=1, ply_cap=50,
+            agent_versions=("v2", "v2"),
+            agent_params=({"epsilon": 1.0}, {}))
+        directory = tempfile.mkdtemp()
+        logger = GameLogger(os.path.join(directory, "games.csv"),
+                            os.path.join(directory, "moves.csv"))
+        logger.write(record)
+        logger.close()
+        with open(os.path.join(directory, "games.csv"), newline="") as handle:
+            row = list(csv.DictReader(handle))[0]
+        blank = sorted(c for c in GAME_COLUMNS if row.get(c) in (None, ""))
+        self.assertEqual(blank, [], "declared but never written: %s" % blank)
+        self.assertEqual(row["agent_first_version"], "v2")
+        self.assertEqual(row["agent_first_params"], '{"epsilon": 1.0}')
+
+
 if __name__ == "__main__":
     unittest.main()

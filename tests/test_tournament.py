@@ -77,9 +77,6 @@ class RunTest(unittest.TestCase):
         self.assertEqual(first, second, "resume re-ran completed games")
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 class CalibratedParameterTest(unittest.TestCase):
     """The tournament must use the parameters calibration selected.
@@ -112,3 +109,69 @@ class CalibratedParameterTest(unittest.TestCase):
             self.assertEqual(seen.get(key), value,
                              "%s was not passed through to mcts_agent.make" % key)
         self.assertEqual(seen.get("max_nodes"), tournament.CAPS["max_nodes"])
+
+
+class VersionSelectionTest(unittest.TestCase):
+    def test_default_is_v1_so_old_commands_reproduce_v1(self):
+        source = tournament.agent_source("v1")
+        self.assertEqual(source.VERSION, "v1")
+        self.assertEqual(source.AGENTS, tournament.AGENTS)
+
+    def test_v1_shim_builds_the_same_agents_as_the_inline_path(self):
+        from evaluation import isolation_eval
+        source = tournament.agent_source("v1")
+        for label in tournament.AGENTS:
+            self.assertTrue(
+                callable(source.build(label, isolation_eval.evaluate)))
+
+    def test_v2_and_v3_are_selectable_and_report_their_own_versions(self):
+        self.assertEqual(tournament.agent_source("v2").VERSION, "v2")
+        self.assertEqual(tournament.agent_source("v3").VERSION, "v3")
+
+    def test_unknown_version_raises(self):
+        with self.assertRaises(ValueError):
+            tournament.agent_source("v9")
+
+    def test_v1_shim_exposes_the_harness_constants_as_its_params(self):
+        source = tournament.agent_source("v1")
+        self.assertEqual(source.params("mcts")["epsilon"], 1.0)
+        self.assertEqual(source.params("random"), {})
+
+    def test_evaluators_follow_the_agent_version(self):
+        self.assertEqual(
+            tournament.evaluator_source("v2", "isolation").__name__,
+            "evaluation.v2.isolation_eval")
+
+
+class RunMetaTest(unittest.TestCase):
+    def _write(self, path, version="v2"):
+        tournament.write_run_meta(path, version, ("ataxx",), ("hard",), 25, 300)
+
+    def test_writes_the_roster_with_versions_and_params(self):
+        import json
+        import os
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), "run_meta.json")
+        self._write(path)
+        with open(path) as handle:
+            meta = json.load(handle)
+        self.assertEqual(meta["agent_version"], "v2")
+        self.assertEqual(meta["trials"], 25)
+        self.assertEqual(meta["schedule_size"], 300)
+        self.assertEqual(meta["source"], "recorded")
+        self.assertIn("python", meta)
+        self.assertIn("platform", meta)
+        self.assertEqual(meta["roster"]["mcts"]["epsilon"], 1.0)
+
+    def test_a_restart_appends_rather_than_clobbering(self):
+        import json
+        import os
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), "run_meta.json")
+        self._write(path)
+        self._write(path)
+        with open(path) as handle:
+            meta = json.load(handle)
+        self.assertEqual(len(meta["starts"]), 2)
+if __name__ == "__main__":
+    unittest.main()
