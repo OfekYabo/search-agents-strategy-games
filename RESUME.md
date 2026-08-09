@@ -255,6 +255,9 @@ percentages. See `docs/RUNBOOK.md` Q16.
 - Multipass snapshot `pre-calibration` exists host-side
 - Guest systemd timers disabled; `systemd-tmpfiles-clean.timer` masked
 
+> **Before starting any new run:** agents are versioned and frozen once run against.
+> `agents/` is v1 and must not change. See `docs/VERSIONING.md`.
+
 **Do not, while the run is going:** install packages, enable timers, run builds
 or indexing, start other VMs, or run the test suite. The budgets are wall clock —
 any background CPU steals search time and corrupts the measurement.

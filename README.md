@@ -35,6 +35,8 @@ Isolation 5x5 is a **declared variant** of the 1972 original, not the published 
 
 All search agents operate under a shared per-move time budget and a bounded memory footprint. Each move is tagged as **normal**, **time-limited**, or **memory-limited** to explain performance differences, not only report them.
 
+Agents are **versioned**, and a version is frozen once a tournament has run against it — a fix becomes a new version rather than an edit. `agents/` is v1 (frozen, published in `results/report.md`); `agents/v2/` and `agents/v3/` are the live versions. Read [`docs/VERSIONING.md`](docs/VERSIONING.md) before changing any agent.
+
 ---
 
 ## Dependencies

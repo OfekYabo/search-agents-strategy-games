@@ -288,6 +288,22 @@ Resume is idempotent, so a restart re-reads `games.csv`, drops any orphan move r
 interrupted game, and continues. Take a VM snapshot **before** the calibration gate, so a
 failed gate does not cost the setup.
 
+### Agent versions
+
+Agents are versioned and a version is **frozen once a tournament has run against it**;
+a fix becomes a new version rather than an edit. `agents/` is v1 and is not to be
+changed - it produced the published v1 report. `agents/v2/` and `agents/v3/` are the
+live versions, and each declares its own `VERSION` constant which must match its
+directory.
+
+The full policy, including what to do when a bug affects more than one live version, is
+in `docs/VERSIONING.md`. **Read it before touching an agent.**
+
+Every run writes `results/raw/run_meta.json` at startup recording the roster and its
+versions, the caps, the budgets, the interpreter and the git commit, and `games.csv`
+carries the agent versions per game. Do not rely on remembering which code was checked
+out - that gap is what caused defect D4.
+
 ### The run
 
 ```bash
