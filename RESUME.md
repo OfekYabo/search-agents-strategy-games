@@ -51,8 +51,14 @@ ExecStart=/usr/bin/python3 -m experiments.tournament \
 
 > **What changed in v2:** the one-ply heuristic agent no longer declines an
 > immediate win. v1 declined one in 28.0% of such positions on Isolation, 11.6% on
-> UTTT and 3.2% on Ataxx, which is why its Isolation heuristic scored only 0.750
-> against the random agent. Everything else is byte-identical to v1.
+> UTTT and 3.2% on Ataxx; v2 declines none. Everything else is byte-identical to v1.
+>
+> **It does not repair the weak Isolation control.** Measured over 720 games per
+> version, the heuristic's score against the random agent moves 0.750 [0.666, 0.819]
+> to 0.767 [0.683, 0.833] - two extra wins in 120, intervals almost entirely
+> overlapping. Declining a win usually still wins from a mobility advantage, so the
+> rate of declined wins is not the rate of lost games. Expect V2's Isolation numbers
+> to look much like V1's.
 
 ### If it was never started
 

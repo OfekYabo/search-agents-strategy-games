@@ -33,10 +33,19 @@ def make(evaluate):
             # winning child leaves the opponent with no moves, which mobility
             # difference scores as ours/32 - while a non-winning child that
             # leaves us more room scores (ours-1)/32, which can be larger. v1
-            # therefore declined an available immediate win in 24.0% of such
-            # positions on Isolation, 14.8% on UTTT and 3.2% on Ataxx. The
-            # Isolation figure closely matches its 25% loss rate to the random
-            # agent, which the v1 report flagged without finding the cause.
+            # therefore declined an available immediate win in 28.0% of such
+            # positions on Isolation, 11.6% on UTTT and 3.2% on Ataxx. v2
+            # declines none.
+            #
+            # It does NOT explain the weak Isolation control. Measured over
+            # 720 games per version, the heuristic's score against the random
+            # agent moves 0.750 [0.666, 0.819] -> 0.767 [0.683, 0.833]: two
+            # extra wins in 120, intervals almost entirely overlapping. The
+            # rate of declined wins is not the rate of lost games, because
+            # declining one usually still wins from a mobility advantage. The
+            # fix is kept because conceding a forced win is indefensible
+            # regardless of how often it costs the game, not because it
+            # repairs that finding - it does not.
             #
             # Alpha-Beta and MCTS never had this bug: both check is_terminal
             # before evaluating. Only the one-ply agent skipped it.
