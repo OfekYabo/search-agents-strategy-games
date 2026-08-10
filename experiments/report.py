@@ -201,6 +201,30 @@ def render(document, sections, figure_names, run_meta=None):
          ["configs", ", ".join(meta["configs"])],
          ["agents", ", ".join(agents)],
          ["error moves", errors]]))
+
+    # Run time, derived from the data rather than from a clock outside it:
+    # the sum of every move's elapsed_s. It matched the observed wall clock to
+    # within 0.1% on both real runs, because a tournament is essentially all
+    # search. Wall clock is shown beside it when the run recorded one, since
+    # the gap between them is exactly the time the run was not searching.
+    search_seconds = meta.get("total_search_seconds") or 0.0
+    wall_seconds = (run_meta or {}).get("wall_clock_seconds")
+    if search_seconds:
+        line = ("\n**Run time: %.2f h of search** (summed from every move's "
+                "`elapsed_s`, so it is derived from the data, not from an "
+                "external clock)" % (search_seconds / 3600.0))
+        if wall_seconds:
+            line += ", against **%.2f h wall clock**" % (wall_seconds / 3600.0)
+        parts.append(line + "\n")
+        if wall_seconds and search_seconds > 0:
+            overhead = 100.0 * (wall_seconds - search_seconds) / search_seconds
+            if overhead > 10.0:
+                parts.append(
+                    "\n> **POSSIBLE STALL: wall clock exceeds search time by "
+                    "%.0f%%.** A tournament is essentially all search, so a "
+                    "gap this large means the run was paused, restarted, or "
+                    "competing with something else on the host. Treat the "
+                    "timings with suspicion.\n" % overhead)
     parts.append(slot("overview"))
 
     # 2. Method for this run
@@ -219,7 +243,26 @@ def render(document, sections, figure_names, run_meta=None):
         parts.append(_table(
             ["property", "value"],
             [[key, _plain(run_meta[key])] for key in sorted(run_meta)
-             if key not in ("source", "roster", "starts")]))
+             if key not in ("source", "roster", "starts", "host",
+                            "wall_clock_seconds")]))
+
+        # The host gets its own table rather than one flattened cell. A
+        # wall-clock budget is only meaningful relative to the machine that
+        # produced it, so how many cores and which CPU are part of the result,
+        # not incidental bookkeeping.
+        host = run_meta.get("host") or {}
+        if host:
+            labels = [("cpu_model", "CPU"), ("cpu_count", "vCPU"),
+                      ("ram_gb", "RAM (GB)"), ("disk_gb", "Disk (GB)"),
+                      ("os", "OS"), ("kernel", "Kernel"),
+                      ("arch", "Architecture"),
+                      ("virtualisation", "Virtualisation")]
+            parts.append("\n**Host** - the budget is wall clock, so results are "
+                         "only comparable against the same machine\n")
+            parts.append(_table(
+                ["property", "value"],
+                [[label, _plain(host[key])] for key, label in labels
+                 if key in host]))
     else:
         parts.append("\n> Run metadata was **not recorded by this run**. "
                      "The MCTS rollout parameters, interpreter version and "
@@ -335,6 +378,14 @@ def render(document, sections, figure_names, run_meta=None):
         ["game", "config", "mean plies", "median plies", "games"],
         [[r["game"], r["config"], "%.1f" % r["mean_plies"],
           r["median_plies"], r["games"]] for r in document["game_length"]]))
+    if document.get("search_time"):
+        parts.append("\n**Where the search time went**\n")
+        parts.append(_table(
+            ["game", "config", "hours", "% of run"],
+            [[r["game"], r["config"], "%.2f" % (r["seconds"] / 3600.0),
+              _pct(r["share"])]
+             for r in sorted(document["search_time"],
+                             key=lambda r: -r["seconds"])]))
     parts.append("\n-> End-reason breakdown: [E4](#e4-end-reasons).\n")
     parts.append(slot("game-characteristics"))
 

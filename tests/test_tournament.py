@@ -173,5 +173,32 @@ class RunMetaTest(unittest.TestCase):
         with open(path) as handle:
             meta = json.load(handle)
         self.assertEqual(len(meta["starts"]), 2)
+
+class HostInfoTest(unittest.TestCase):
+    """A wall-clock budget is only meaningful relative to the machine that
+    produced it, so the host belongs in the data. platform.platform() alone
+    gives the kernel and glibc and says nothing about cores, memory or the
+    CPU - which are the parts that decide how much search a budget buys."""
+
+    def test_records_the_specs_that_decide_how_much_search_a_budget_buys(self):
+        host = tournament.host_info()
+        for key in ("cpu_count", "ram_gb", "disk_gb", "os", "kernel",
+                    "cpu_model", "virtualisation"):
+            self.assertIn(key, host)
+        self.assertGreater(host["cpu_count"], 0)
+        self.assertGreater(host["ram_gb"], 0)
+
+    def test_host_reaches_run_meta(self):
+        import json
+        import os
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), "run_meta.json")
+        tournament.write_run_meta(path, "v2", ("ataxx",), ("hard",), 25, 300)
+        with open(path) as handle:
+            meta = json.load(handle)
+        self.assertIn("host", meta)
+        self.assertEqual(meta["host"]["cpu_count"], tournament.host_info()["cpu_count"])
+
+
 if __name__ == "__main__":
     unittest.main()

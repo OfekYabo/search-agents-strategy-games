@@ -1,11 +1,31 @@
 {
+  "caps": {
+    "max_entries": 200000,
+    "max_nodes": 50000
+  },
+  "host": {
+    "arch": "x86_64",
+    "cpu_count": 4,
+    "cpu_model": "13th Gen Intel(R) Core(TM) i7-1365U",
+    "disk_gb": 19.2,
+    "kernel": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+    "os": "Ubuntu 22.04.5 LTS",
+    "ram_gb": 3.82,
+    "source": "measured on the same VM after the fact; the V1 run predates host_info()",
+    "virtualisation": "microsoft"
+  },
+  "mcts_rollout": {
+    "epsilon": 1.0,
+    "rollout_depth": 10,
+    "sample_k": 1
+  },
+  "note": "Reconstructed after the fact. The tournament does not write run metadata; see the V2 improvement list.",
+  "platform": "Ubuntu 22.04, Multipass guest, 4 vCPU / 4 GB",
+  "python": "3.10.12",
+  "restarts": 0,
   "source": "reconstructed",
   "tag": "v1-tournament",
-  "python": "3.10.12",
-  "platform": "Ubuntu 22.04, Multipass guest, 4 vCPU / 4 GB",
   "wall_clock": "7h56m",
-  "restarts": 0,
-  "mcts_rollout": {"epsilon": 1.0, "sample_k": 1, "rollout_depth": 10},
-  "caps": {"max_nodes": 50000, "max_entries": 200000},
-  "note": "Reconstructed after the fact. The tournament does not write run metadata; see the V2 improvement list."
+  "wall_clock_seconds": 28548.0,
+  "wall_clock_source": "reconstructed from the run's own log; this run predates record_run_finished()"
 }

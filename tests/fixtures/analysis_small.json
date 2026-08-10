@@ -1470,6 +1470,9 @@
     }
   ],
   "meta": {
+    "agent_versions": [
+      "v1"
+    ],
     "agents": [
       "alpha_beta",
       "heuristic",
@@ -1498,7 +1501,10 @@
       "isolation"
     ],
     "games_total": 2160,
-    "label": "fixture"
+    "label": "fixture",
+    "roster": {},
+    "roster_conflicts": [],
+    "total_search_seconds": 16344.304484999999
   },
   "score_table": [
     {
@@ -1838,6 +1844,44 @@
       "max_depth": 15,
       "median_depth": 7,
       "moves": 785
+    }
+  ],
+  "search_time": [
+    {
+      "config": "easy",
+      "game": "ataxx",
+      "seconds": 12187.237575,
+      "share": 42.64157
+    },
+    {
+      "config": "hard",
+      "game": "ataxx",
+      "seconds": 445.777075,
+      "share": 1.559716
+    },
+    {
+      "config": "main",
+      "game": "ataxx",
+      "seconds": 2979.611918,
+      "share": 10.425277
+    },
+    {
+      "config": "easy",
+      "game": "isolation",
+      "seconds": 580.946429,
+      "share": 2.032657
+    },
+    {
+      "config": "hard",
+      "game": "isolation",
+      "seconds": 25.940775,
+      "share": 0.090763
+    },
+    {
+      "config": "main",
+      "game": "isolation",
+      "seconds": 124.790713,
+      "share": 0.436627
     }
   ],
   "simulations_per_root": [

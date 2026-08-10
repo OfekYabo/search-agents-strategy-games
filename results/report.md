@@ -10,6 +10,9 @@
 | agents | alpha_beta, mcts, heuristic, random |
 | error moves | 0 |
 
+**Run time: 7.94 h of search** (summed from every move's `elapsed_s`, so it is derived from the data, not from an external clock), against **7.93 h wall clock**
+
+
 This is the **v1 tournament**: the full grid of 3 games x 4 agents x 3 time
 budgets x 20 trials, played in both seat orders, 2160 games in 7 h 56 m on a
 dedicated idle VM.
@@ -51,6 +54,20 @@ grid rather than a filtered subset.
 | restarts | 0 |
 | tag | v1-tournament |
 | wall_clock | 7h56m |
+| wall_clock_source | reconstructed from the run's own log; this run predates record_run_finished() |
+
+**Host** - the budget is wall clock, so results are only comparable against the same machine
+
+| property | value |
+|---|---|
+| CPU | 13th Gen Intel(R) Core(TM) i7-1365U |
+| vCPU | 4 |
+| RAM (GB) | 3.82 |
+| Disk (GB) | 19.2 |
+| OS | Ubuntu 22.04.5 LTS |
+| Kernel | Linux-5.15.0-186-generic-x86_64-with-glibc2.35 |
+| Architecture | x86_64 |
+| Virtualisation | microsoft |
 
 Read the budget table carefully: **`easy` means *more* time, `hard` means less.**
 The names describe difficulty for the agent, not size of budget, and they are easy
@@ -448,6 +465,20 @@ on a wide game. It never binds on Isolation at any budget.
 | uttt | easy | 38.7 | 37.0 | 240 |
 | uttt | hard | 39.2 | 38.5 | 240 |
 | uttt | main | 38.6 | 38.0 | 240 |
+
+**Where the search time went**
+
+| game | config | hours | % of run |
+|---|---|---|---|
+| ataxx | easy | 3.39 | 42.6% |
+| uttt | easy | 2.62 | 33.0% |
+| ataxx | main | 0.83 | 10.4% |
+| uttt | main | 0.65 | 8.2% |
+| isolation | easy | 0.16 | 2.0% |
+| uttt | hard | 0.13 | 1.7% |
+| ataxx | hard | 0.12 | 1.6% |
+| isolation | main | 0.03 | 0.4% |
+| isolation | hard | 0.01 | 0.1% |
 
 -> End-reason breakdown: [E4](#e4-end-reasons).
 

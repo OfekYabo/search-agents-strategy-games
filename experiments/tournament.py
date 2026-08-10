@@ -163,6 +163,83 @@ def evaluator_source(version, game):
     return getattr(package, "%s_eval" % game)
 
 
+def host_info():
+    # type: () -> dict
+    """The machine, in the detail a wall-clock budget makes necessary.
+
+    `platform.platform()` gives the kernel and glibc and says nothing about
+    cores, memory or the CPU - which are exactly the things that decide how
+    much search a budget buys. Recording only that string is how the V1
+    metadata ended up less informative than the note someone wrote by hand.
+
+    Every source here is stdlib except the virtualisation probe, which
+    degrades to "unknown" rather than failing: this runs inside the
+    measurement path and must never be the reason a tournament does not start.
+    """
+    import platform
+    import shutil
+    import subprocess
+
+    def _first_line(path, prefix=""):
+        try:
+            with open(path) as handle:
+                for line in handle:
+                    if line.startswith(prefix):
+                        return line.split("=", 1)[-1].split(":", 1)[-1] \
+                            .strip().strip('"')
+        except (IOError, OSError):
+            pass
+        return "unknown"
+
+    try:
+        ram = os.sysconf("SC_PHYS_PAGES") * os.sysconf("SC_PAGE_SIZE")
+    except (ValueError, OSError, AttributeError):
+        ram = 0
+    try:
+        disk = shutil.disk_usage("/").total
+    except OSError:
+        disk = 0
+    try:
+        virt = subprocess.check_output(["systemd-detect-virt"],
+                                       stderr=subprocess.STDOUT).decode().strip()
+    except Exception:
+        virt = "unknown"
+
+    return {
+        "cpu_count": os.cpu_count() or 0,
+        "cpu_model": _first_line("/proc/cpuinfo", "model name"),
+        "ram_gb": round(ram / (1024.0 ** 3), 2),
+        "disk_gb": round(disk / (1024.0 ** 3), 2),
+        "os": _first_line("/etc/os-release", "PRETTY_NAME"),
+        "kernel": platform.platform(),
+        "arch": platform.machine(),
+        "virtualisation": virt,
+    }
+
+
+def record_run_finished(path, wall_clock_seconds):
+    # type: (str, float) -> None
+    """Stamp the completed run's wall clock into run_meta.
+
+    Search time is derivable from moves.csv and matches wall clock to within
+    0.1% on a healthy run. Recording both lets the report compare them, and
+    the gap between them is exactly the time the run was not searching - a
+    stall, a pause, or something else competing for the host.
+    """
+    import json
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path) as handle:
+            meta = json.load(handle)
+    except ValueError:
+        return
+    meta["wall_clock_seconds"] = round(wall_clock_seconds, 3)
+    with open(path, "w") as handle:
+        json.dump(meta, handle, sort_keys=True, indent=2)
+        handle.write("\n")
+
+
 def write_run_meta(path, version, games, configs, trials, schedule_size):
     # type: (str, str, tuple, tuple, int, int) -> None
     """Record what this run is, at startup.
@@ -210,6 +287,7 @@ def write_run_meta(path, version, games, configs, trials, schedule_size):
                        for label in source.AGENTS),
         "python": start["python"],
         "platform": start["platform"],
+        "host": host_info(),
         "commit": commit,
         "starts": existing.get("starts", []) + [start],
     }
@@ -283,8 +361,12 @@ def main(argv=None):
     write_run_meta(os.path.join(args.out, "run_meta.json"),
                    args.agent_version, games, configs, args.trials,
                    len(schedule))
+    import time
+    started = time.time()
     played = run(schedule, args.out, workers=args.workers,
                  resume=not args.no_resume, version=args.agent_version)
+    record_run_finished(os.path.join(args.out, "run_meta.json"),
+                        time.time() - started)
     print("played %d games (rest already present)" % played)
     return 0
 

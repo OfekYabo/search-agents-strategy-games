@@ -1,0 +1,69 @@
+{
+  "agent_version": "v2",
+  "budgets": {
+    "ataxx": {
+      "easy": 2.0,
+      "hard": 0.1,
+      "main": 0.5
+    },
+    "isolation": {
+      "easy": 0.5,
+      "hard": 0.02,
+      "main": 0.1
+    },
+    "uttt": {
+      "easy": 2.0,
+      "hard": 0.1,
+      "main": 0.5
+    }
+  },
+  "commit": "04d29c63aac254addf918ff5518592f31da6398e",
+  "configs": [
+    "easy",
+    "main",
+    "hard"
+  ],
+  "games": [
+    "isolation",
+    "uttt",
+    "ataxx"
+  ],
+  "host": {
+    "arch": "x86_64",
+    "cpu_count": 4,
+    "cpu_model": "13th Gen Intel(R) Core(TM) i7-1365U",
+    "disk_gb": 19.2,
+    "kernel": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+    "os": "Ubuntu 22.04.5 LTS",
+    "ram_gb": 3.82,
+    "source": "measured on the same VM after the fact; the V2 run predates host_info()",
+    "virtualisation": "microsoft"
+  },
+  "platform": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+  "python": "3.10.12",
+  "roster": {
+    "alpha_beta": {
+      "max_entries": 200000
+    },
+    "heuristic": {},
+    "mcts": {
+      "epsilon": 1.0,
+      "max_nodes": 50000,
+      "rollout_depth": 10,
+      "sample_k": 1
+    },
+    "random": {}
+  },
+  "schedule_size": 2700,
+  "source": "recorded",
+  "starts": [
+    {
+      "commit": "04d29c63aac254addf918ff5518592f31da6398e",
+      "platform": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+      "python": "3.10.12"
+    }
+  ],
+  "trials": 25,
+  "wall_clock_seconds": 35325.0,
+  "wall_clock_source": "measured after completion from systemd ExecMainStartTimestamp to the final games.csv write; this run predates record_run_finished()"
+}

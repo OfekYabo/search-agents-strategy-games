@@ -381,6 +381,45 @@ class AgentVersionMetaTest(unittest.TestCase):
         meta = analyse.build_analysis(games, [], label="x")["meta"]
         self.assertIn("mcts@v2", meta["roster_conflicts"])
 
+class SearchTimeTest(unittest.TestCase):
+    """Run time is derivable from the data: it is the sum of every move's
+    elapsed_s. On both real runs that matched the observed wall clock to
+    within 0.1%, because harness overhead is negligible - the run is
+    essentially all search."""
+
+    MOVES = [
+        {"game": "ataxx", "config": "easy", "agent": "mcts",
+         "elapsed_s": "2.0"},
+        {"game": "ataxx", "config": "easy", "agent": "heuristic",
+         "elapsed_s": "0.0"},
+        {"game": "ataxx", "config": "hard", "agent": "mcts",
+         "elapsed_s": "1.0"},
+        {"game": "uttt", "config": "hard", "agent": "mcts",
+         "elapsed_s": "1.0"},
+    ]
+
+    def test_totals_per_cell_and_share_of_the_run(self):
+        table = analyse.search_time(self.MOVES)
+        self.assertAlmostEqual(table[("ataxx", "easy")]["seconds"], 2.0)
+        self.assertAlmostEqual(table[("ataxx", "easy")]["share"], 50.0)
+        self.assertAlmostEqual(table[("uttt", "hard")]["share"], 25.0)
+
+    def test_an_empty_run_does_not_divide_by_zero(self):
+        self.assertEqual(analyse.search_time([]), {})
+
+    def test_total_seconds_reaches_the_document(self):
+        games = [{"game_id": "g1", "game": "ataxx", "config": "easy",
+                  "time_budget_s": "2.0", "agent_first": "mcts",
+                  "agent_second": "heuristic", "winner": "first",
+                  "plies": "2", "end_reason": "eliminated"}]
+        moves = [{"game_id": "g1", "ply": "0", "agent": "mcts",
+                  "side": "first", "tag": "time-limited", "elapsed_s": "2.0",
+                  "nodes": "", "simulations": "10", "depth": "",
+                  "move": "x", "legal_move_count": "5"}]
+        doc = analyse.build_analysis(games, moves, label="x")
+        self.assertAlmostEqual(doc["meta"]["total_search_seconds"], 2.0)
+        self.assertEqual(len(doc["search_time"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

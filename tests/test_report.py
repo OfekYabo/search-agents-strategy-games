@@ -288,6 +288,32 @@ class RosterSectionTest(unittest.TestCase):
         text = report.render(document, {}, [])
         self.assertNotIn("WARNING", text)
 
+class SearchTimeSectionTest(unittest.TestCase):
+    def _document(self, **meta_extra):
+        with open(_fixture_path()) as handle:
+            document = json.load(handle)
+        document["meta"].update(meta_extra)
+        return document
+
+    def test_overview_reports_run_time_derived_from_the_data(self):
+        text = report.render(self._document(), {}, [])
+        self.assertIn("search time", text.lower())
+
+    def test_wall_clock_is_shown_beside_it_when_recorded(self):
+        text = report.render(self._document(), {}, [],
+                             run_meta={"source": "recorded",
+                                       "wall_clock_seconds": 35325})
+        self.assertIn("9.81", text)
+
+    def test_a_large_gap_between_wall_clock_and_search_is_flagged(self):
+        """A wall clock much longer than the search time means the run stalled
+        or was paused. Silently reporting only one of them would hide it."""
+        document = self._document(total_search_seconds=3600.0)
+        text = report.render(document, {}, [],
+                             run_meta={"source": "recorded",
+                                       "wall_clock_seconds": 7200})
+        self.assertIn("STALL", text.upper())
+
 
 if __name__ == "__main__":
     unittest.main()
