@@ -364,5 +364,49 @@ class V3MetricsSectionTest(unittest.TestCase):
         self.assertNotIn("Transposition table", text)
 
 
+
+
+class SelfplayReportTest(unittest.TestCase):
+    """The self-play CSVs use their own schema, so analyse.py cannot read
+    them. Without this the experiment produces data nobody reads."""
+
+    def _rows(self):
+        # Same unordered pair in both seat orders. The larger budget wins
+        # three of four, so pooling must not cancel it out.
+        base = {"game": "ataxx", "agent": "mcts", "plies": "40"}
+        return [
+            dict(base, first_budget_s="2", second_budget_s="0.5",
+                 winner="first"),    # high seated first, high wins
+            dict(base, first_budget_s="0.5", second_budget_s="2",
+                 winner="second"),   # high seated second, high wins
+            dict(base, first_budget_s="2", second_budget_s="0.5",
+                 winner="second"),   # high seated first, high LOSES
+            dict(base, first_budget_s="0.5", second_budget_s="2",
+                 winner="second"),   # high seated second, high wins
+        ]
+
+    def test_score_is_from_the_higher_budget_point_of_view(self):
+        from experiments import selfplay_report
+        table = selfplay_report.budget_pairs(self._rows())
+        entry = table[("ataxx", 0.5, 2.0)]
+        self.assertEqual((entry["wins"], entry["losses"]), (3, 1))
+        self.assertAlmostEqual(entry["score"], 0.75)
+
+    def test_both_seat_orders_are_pooled(self):
+        from experiments import selfplay_report
+        table = selfplay_report.budget_pairs(self._rows())
+        self.assertEqual(table[("ataxx", 0.5, 2.0)]["games"], 4)
+
+    def test_render_marks_an_interval_that_excludes_a_half(self):
+        from experiments import selfplay_report
+        rows = self._rows() * 20          # 80 games, 0.75 -> CI excludes 0.5
+        text = selfplay_report.render(rows, "test")
+        self.assertIn("more time wins", text)
+
+    def test_render_survives_an_empty_run(self):
+        from experiments import selfplay_report
+        self.assertIn("No games found", selfplay_report.render([], "test"))
+
+
 if __name__ == "__main__":
     unittest.main()

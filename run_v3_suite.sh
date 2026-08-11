@@ -21,7 +21,7 @@
 #   unbounded: it is crash-safe and resumable, so letting it run long is
 #   always better than killing it partway.
 #
-# Order: fastest first, main grid last. See ORDER note below.
+# Order: main grid FIRST, optional experiments after. See ORDER note below.
 
 DIR=/home/ubuntu/search-agents-strategy-games
 cd "$DIR" || exit 1
@@ -60,30 +60,21 @@ say "=================================================================="
 say "V3 suite starting. Agent version v3. Sequential, never parallel."
 say "=================================================================="
 
-# ---------------------------------------------------------------- fast first
-# Optional asymmetric-time self-play. Not crash-safe by design: it truncates
-# its CSVs on start and has no resume, so a failure means re-running it, which
-# is cheap. Bounded so a hang cannot delay the main grid indefinitely.
-step "time-selfplay/mcts" 7200 \
-    python3 -m experiments.time_budget_selfplay \
-        --game all --agent mcts --budgets 0.1,0.5,2.0 --trials 10 \
-        --out "$DIR/results/v3/time-selfplay-mcts"
-
-step "time-selfplay/alpha_beta" 7200 \
-    python3 -m experiments.time_budget_selfplay \
-        --game all --agent alpha_beta --budgets 0.1,0.5,2.0 --trials 10 \
-        --out "$DIR/results/v3/time-selfplay-alpha_beta"
-
-# ---------------------------------------------------------------- long last
-# The main V3 grid: 2700 games, the deliverable. Unbounded and resumable - a
-# restart re-reads games.csv and continues, so it is safe to leave running.
+# ------------------------------------------------------- the deliverable first
+# The main V3 grid: 2700 games, ~12-15 h. Unbounded and resumable - a restart
+# re-reads games.csv and continues, so letting it run long always beats killing
+# it partway.
+#
+# ORDER NOTE: this runs FIRST deliberately. It is the deliverable, and it is
+# the only crash-safe step - the optional experiments truncate their own output
+# and cost ~90 min to redo, while a lost grid costs the night. Its analysis
+# follows immediately so a readable report exists while the optional
+# experiments are still running.
 step "main-grid/v3" none \
     python3 -m experiments.tournament \
         --games all --configs all --trials 25 \
         --agent-version v3 --out "$DIR/results/v3/raw"
 
-# ---------------------------------------------------------------- analysis
-# Cheap, and means a finished suite already has a readable report waiting.
 step "analyse/v3" 1800 \
     bash -c "python3 -m experiments.analyse --raw '$DIR/results/v3/raw' \
         --json '$DIR/results/v3/analysis.json' --label v3-tournament \
@@ -97,6 +88,35 @@ step "report/v3" 1800 \
         --commentary "$DIR/docs/report/commentary-v3.md" \
         --run-meta "$DIR/results/v3/raw/run_meta.json"
 
+say "MAIN GRID COMPLETE - results/v3/report.md is ready to read"
+
+# ------------------------------------------------------------ optional extras
+# Asymmetric-time self-play. Not crash-safe by design: truncates its CSVs on
+# start, no resume. Cheap to redo, so bounded rather than protected - and a
+# timeout is the only thing that stops a HANG eating the remaining time.
+step "time-selfplay/mcts" 7200 \
+    python3 -m experiments.time_budget_selfplay \
+        --game all --agent mcts --budgets 0.1,0.5,2.0 --trials 10 \
+        --out "$DIR/results/v3/time-selfplay-mcts"
+
+step "selfplay-report/mcts" 600 \
+    python3 -m experiments.selfplay_report \
+        --raw "$DIR/results/v3/time-selfplay-mcts" --label "MCTS" \
+        --out "$DIR/results/v3/selfplay-mcts.md"
+
+step "time-selfplay/alpha_beta" 7200 \
+    python3 -m experiments.time_budget_selfplay \
+        --game all --agent alpha_beta --budgets 0.1,0.5,2.0 --trials 10 \
+        --out "$DIR/results/v3/time-selfplay-alpha_beta"
+
+step "selfplay-report/alpha_beta" 600 \
+    python3 -m experiments.selfplay_report \
+        --raw "$DIR/results/v3/time-selfplay-alpha_beta" --label "Alpha-Beta" \
+        --out "$DIR/results/v3/selfplay-alpha_beta.md"
+
 say "=================================================================="
 say "V3 suite finished."
+say "  results/v3/report.md              main tournament"
+say "  results/v3/selfplay-mcts.md       time scaling, MCTS"
+say "  results/v3/selfplay-alpha_beta.md time scaling, Alpha-Beta"
 say "=================================================================="

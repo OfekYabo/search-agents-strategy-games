@@ -11,6 +11,7 @@
 DIR=/home/ubuntu/search-agents-strategy-games
 RAW=$DIR/results/v3/raw
 LOG=$DIR/results/v3/suite.log
+SUITE_LOG=$LOG
 TOTAL=2700
 
 # What this run is SUPPOSED to be. Checked against three independent places
@@ -166,5 +167,25 @@ fi
 [ "$VERDICT" = "OK" ] && echo " >>> Healthy. Nothing to do."
 echo
 
+# ---- suite steps -----------------------------------------------------
+# The game count above tracks the MAIN GRID only. The optional experiments
+# run after it and would otherwise be invisible.
+echo "--- suite steps ---"
+if [ -f "$SUITE_LOG" ]; then
+    grep -E "START |OK    |FAILED|TIMED OUT|MAIN GRID COMPLETE|suite finished" \
+        "$SUITE_LOG" | tail -12
+else
+    echo "(suite not started yet)"
+fi
+echo
+echo "--- reports produced so far ---"
+for f in report.md selfplay-mcts.md selfplay-alpha_beta.md; do
+    if [ -f "$DIR/results/v3/$f" ]; then
+        echo "  [ready] results/v3/$f"
+    else
+        echo "  [ ... ] results/v3/$f"
+    fi
+done
+echo
 echo "--- last 6 log lines ---"
 tail -6 "$LOG" 2>/dev/null || echo "(no log yet)"
