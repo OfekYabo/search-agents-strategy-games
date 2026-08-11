@@ -220,27 +220,56 @@ def host_info():
     }
 
 
-def record_run_finished(path, wall_clock_seconds):
-    # type: (str, float) -> None
-    """Stamp the completed run's wall clock into run_meta.
+def _load_meta(path):
+    # type: (str) -> dict
+    import json
+    if not os.path.exists(path):
+        return {}
+    try:
+        with open(path) as handle:
+            return json.load(handle)
+    except ValueError:
+        return {}
+
+
+def _save_meta(path, meta):
+    # type: (str, dict) -> None
+    import json
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(path, "w") as handle:
+        json.dump(meta, handle, sort_keys=True, indent=2)
+        handle.write("\n")
+
+
+def record_run_finished(path, wall_clock_seconds, played=None):
+    # type: (str, float, Any) -> None
+    """Stamp the run's wall clock into run_meta.
 
     Search time is derivable from moves.csv and matches wall clock to within
     0.1% on a healthy run. Recording both lets the report compare them, and
     the gap between them is exactly the time the run was not searching - a
     stall, a pause, or something else competing for the host.
+
+    Two rules, both learned the hard way on the V2 run. The unit is startable
+    on boot, so a completed run gets re-entered: the tournament found all 2700
+    games present, played none, finished in 0.206 s and stamped that as the
+    wall clock, destroying the recorded 9.81 h. So a resume that played
+    **nothing** must not touch the figure at all.
+
+    And a resume that *did* play adds to the total rather than replacing it,
+    because the run's real cost is the sum of the attempts that did work, not
+    whichever attempt happened to finish last.
     """
-    import json
-    if not os.path.exists(path):
+    if played == 0:
         return
-    try:
-        with open(path) as handle:
-            meta = json.load(handle)
-    except ValueError:
+    meta = _load_meta(path)
+    if not meta:
         return
-    meta["wall_clock_seconds"] = round(wall_clock_seconds, 3)
-    with open(path, "w") as handle:
-        json.dump(meta, handle, sort_keys=True, indent=2)
-        handle.write("\n")
+    previous = meta.get("wall_clock_seconds") or 0.0
+    meta["wall_clock_seconds"] = round(previous + wall_clock_seconds, 3)
+    _save_meta(path, meta)
 
 
 def write_run_meta(path, version, games, configs, trials, schedule_size):
@@ -270,13 +299,7 @@ def write_run_meta(path, version, games, configs, trials, schedule_size):
              "platform": platform.platform(),
              "commit": commit}
 
-    existing = {}
-    if os.path.exists(path):
-        try:
-            with open(path) as handle:
-                existing = json.load(handle)
-        except ValueError:
-            existing = {}
+    existing = _load_meta(path)
 
     meta = {
         "source": "recorded",
@@ -298,12 +321,20 @@ def write_run_meta(path, version, games, configs, trials, schedule_size):
         "commit": commit,
         "starts": existing.get("starts", []) + [start],
     }
-    directory = os.path.dirname(path)
-    if directory:
-        os.makedirs(directory, exist_ok=True)
-    with open(path, "w") as handle:
-        json.dump(meta, handle, sort_keys=True, indent=2)
-        handle.write("\n")
+
+    # Merge, never replace. Fields added after a run - a measured wall clock,
+    # a provenance note on the host block - are not reproducible from the
+    # environment, so rebuilding the file from scratch on a restart silently
+    # deletes them. Anything this function does not own is carried forward.
+    merged = dict(existing)
+    for key, value in meta.items():
+        if key == "host" and isinstance(existing.get("host"), dict):
+            host = dict(existing["host"])
+            host.update(value)
+            merged["host"] = host
+        else:
+            merged[key] = value
+    _save_meta(path, merged)
 
 
 def run(schedule, out_dir, workers=1, resume=True, version="v1"):
@@ -384,7 +415,7 @@ def main(argv=None):
     played = run(schedule, args.out, workers=args.workers,
                  resume=not args.no_resume, version=args.agent_version)
     record_run_finished(os.path.join(args.out, "run_meta.json"),
-                        time.time() - started)
+                        time.time() - started, played=played)
     print("played %d games (rest already present)" % played)
     return 0
 

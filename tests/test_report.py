@@ -314,6 +314,55 @@ class SearchTimeSectionTest(unittest.TestCase):
                                        "wall_clock_seconds": 7200})
         self.assertIn("STALL", text.upper())
 
+class V3MetricsSectionTest(unittest.TestCase):
+    """analyse.py computes observed branching, search throughput and
+    search-structure metrics. Without rendering they reach analysis.json and
+    stop there, which is the same as not measuring them."""
+
+    def _document(self, **extra):
+        with open(_fixture_path()) as handle:
+            document = json.load(handle)
+        document.update(extra)
+        return document
+
+    def test_branching_factor_is_rendered(self):
+        doc = self._document(branching_factor=[
+            {"game": "ataxx", "config": "easy", "mean": 35.97,
+             "median": 29.0, "p95": 86.0, "moves": 10019}])
+        text = report.render(doc, {}, [])
+        # Rendered to one decimal, like every other table in the report.
+        self.assertIn("| 36.0 | 29.0 | 86.0 | 10019 |", text)
+        self.assertIn("branching", text.lower())
+
+    def test_throughput_is_rendered(self):
+        doc = self._document(search_throughput=[
+            {"game": "ataxx", "config": "easy", "agent": "alpha_beta",
+             "nodes_per_second": 55556.07,
+             "median_nodes_per_second": 50438.09, "node_moves": 3167}])
+        text = report.render(doc, {}, [])
+        self.assertIn("per second", text.lower())
+
+    def test_transposition_and_tree_metrics_are_rendered(self):
+        doc = self._document(search_structure_metrics=[
+            {"game": "ataxx", "config": "hard", "agent": "alpha_beta",
+             "tt_lookups": 223062, "tt_hits": 53832, "tt_hit_rate": 0.241332,
+             "median_tt_size": 8899.0, "max_tt_size": 31534},
+            {"game": "ataxx", "config": "hard", "agent": "mcts",
+             "mcts_moves": 305, "mcts_reuse_moves": 195,
+             "mcts_reuse_move_pct": 63.93, "median_mcts_tree_nodes": 538,
+             "max_mcts_tree_nodes": 1097, "mean_mcts_reused_nodes": 3.26,
+             "median_mcts_reused_nodes": 1, "total_mcts_reused_nodes": 993}])
+        text = report.render(doc, {}, [])
+        self.assertIn("24.1%", text)          # TT hit rate
+        self.assertIn("63.9%", text)          # tree-reuse rate
+
+    def test_absent_metrics_render_nothing_and_do_not_crash(self):
+        """V1 and V2 data carry none of these, and their reports must be
+        unchanged."""
+        text = report.render(self._document(), {}, [])
+        self.assertNotIn("Observed branching", text)
+        self.assertNotIn("Transposition table", text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -69,6 +69,41 @@ class VersionIntegrityTest(unittest.TestCase):
         self.assertTrue(v3.SEPARATE_RNG_STREAMS)
         self.assertTrue(v3.params("mcts")["tree_reuse"])
 
+class TerminalInvariantTest(unittest.TestCase):
+    """The runner and the MCTS rollout both dropped their is_terminal() call
+    and now treat an empty legal-move list as the terminal condition, to avoid
+    generating moves twice per decision.
+
+    That is only correct while `is_terminal(s)` and `legal_moves(s) == []`
+    agree for every reachable position in every game. Nothing enforced it, and
+    if a game module ever reports a decided position that still has legal
+    moves - a UTTT line win with empty cells, say - games would silently play
+    on past the win and every result would be wrong with no error raised.
+    """
+
+    def test_empty_legal_moves_is_exactly_the_terminal_condition(self):
+        import random
+        from games import isolation, uttt, ataxx
+        for game, seeds, plies in ((isolation, 60, 400),
+                                   (uttt, 60, 400),
+                                   (ataxx, 30, 400)):
+            checked = 0
+            for seed in range(seeds):
+                rng = random.Random(seed)
+                state = game.initial_state()
+                for _ in range(plies):
+                    legal = game.legal_moves(state)
+                    terminal = game.is_terminal(state)
+                    checked += 1
+                    self.assertEqual(
+                        terminal, not legal,
+                        "%s: is_terminal=%s but %d legal moves"
+                        % (game.NAME, terminal, len(legal)))
+                    if terminal:
+                        break
+                    state = game.apply_move(state, rng.choice(legal))
+            self.assertGreater(checked, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

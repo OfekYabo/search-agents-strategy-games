@@ -199,6 +199,56 @@ class HostInfoTest(unittest.TestCase):
         self.assertIn("host", meta)
         self.assertEqual(meta["host"]["cpu_count"], tournament.host_info()["cpu_count"])
 
+class RunMetaDurabilityTest(unittest.TestCase):
+    """A completed run's metadata must survive being re-entered.
+
+    The unit is enabled, so a reboot restarts it. On the V2 run that happened:
+    the tournament found all 2700 games present, played none, finished in
+    0.206 s, and stamped that as the run's wall clock - destroying the
+    recorded 9.81 h. It also rebuilt run_meta from scratch, discarding fields
+    added after the run.
+    """
+
+    def _meta(self, path):
+        import json
+        with open(path) as handle:
+            return json.load(handle)
+
+    def _fresh(self):
+        import os
+        import tempfile
+        path = os.path.join(tempfile.mkdtemp(), "run_meta.json")
+        tournament.write_run_meta(path, "v2", ("ataxx",), ("hard",), 25, 300)
+        return path
+
+    def test_a_no_op_resume_does_not_overwrite_the_wall_clock(self):
+        path = self._fresh()
+        tournament.record_run_finished(path, 35325.0, played=300)
+        tournament.record_run_finished(path, 0.206, played=0)
+        self.assertAlmostEqual(self._meta(path)["wall_clock_seconds"], 35325.0)
+
+    def test_a_resume_that_played_games_accumulates_rather_than_replaces(self):
+        """Two attempts that each did work took the sum of their wall clocks,
+        not whichever finished last."""
+        path = self._fresh()
+        tournament.record_run_finished(path, 100.0, played=10)
+        tournament.record_run_finished(path, 50.0, played=5)
+        self.assertAlmostEqual(self._meta(path)["wall_clock_seconds"], 150.0)
+
+    def test_restarting_preserves_fields_added_after_the_run(self):
+        import json
+        path = self._fresh()
+        meta = self._meta(path)
+        meta["wall_clock_source"] = "measured by hand"
+        meta["host"]["source"] = "measured after the fact"
+        with open(path, "w") as handle:
+            json.dump(meta, handle, sort_keys=True, indent=2)
+        tournament.write_run_meta(path, "v2", ("ataxx",), ("hard",), 25, 300)
+        after = self._meta(path)
+        self.assertEqual(after["wall_clock_source"], "measured by hand")
+        self.assertEqual(after["host"]["source"], "measured after the fact")
+        self.assertEqual(len(after["starts"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

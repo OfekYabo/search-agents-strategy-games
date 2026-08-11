@@ -344,6 +344,46 @@ def render(document, sections, figure_names, run_meta=None):
         # round: the half-step is real and rounding it away would overstate.
         [[r["game"], r["config"], r["agent"], "%.1f" % r["median_depth"],
           r["max_depth"]] for r in document["search_depth"]]))
+    # V3 onward. Rendered only when present, so V1 and V2 reports - which
+    # carry none of these counters - regenerate byte-identically.
+    if document.get("search_throughput"):
+        parts.append("\n**Search throughput** - work per second of budget, "
+                     "which separates 'searched more' from 'searched faster'\n")
+        parts.append(_table(
+            ["game", "config", "agent", "per second (mean)",
+             "per second (median)", "moves"],
+            [[r["game"], r["config"], r["agent"],
+              "%.0f" % (r.get("nodes_per_second")
+                        or r.get("simulations_per_second") or 0),
+              "%.0f" % (r.get("median_nodes_per_second")
+                        or r.get("median_simulations_per_second") or 0),
+              r.get("node_moves") or r.get("simulation_moves") or 0]
+             for r in document["search_throughput"]]))
+
+    structure = document.get("search_structure_metrics") or []
+    tt_rows = [r for r in structure if "tt_lookups" in r]
+    tree_rows = [r for r in structure if "mcts_moves" in r]
+    if tt_rows:
+        parts.append("\n**Transposition table** - Alpha-Beta's memory bound "
+                     "in its own native unit, entries rather than bytes\n")
+        parts.append(_table(
+            ["game", "config", "lookups", "hits", "hit rate",
+             "median size", "max size"],
+            [[r["game"], r["config"], r["tt_lookups"], r["tt_hits"],
+              _pct(100.0 * r["tt_hit_rate"]),
+              "%.0f" % r["median_tt_size"], r["max_tt_size"]]
+             for r in tt_rows]))
+    if tree_rows:
+        parts.append("\n**MCTS tree and subtree reuse** - how much of the "
+                     "previous decision's tree survived the opponent's reply\n")
+        parts.append(_table(
+            ["game", "config", "decisions", "reused on", "reuse rate",
+             "median tree", "max tree", "median reused nodes"],
+            [[r["game"], r["config"], r["mcts_moves"], r["mcts_reuse_moves"],
+              _pct(r["mcts_reuse_move_pct"]), r["median_mcts_tree_nodes"],
+              r["max_mcts_tree_nodes"], r["median_mcts_reused_nodes"]]
+             for r in tree_rows]))
+
     parts.append(figure("fig-sims-per-root.svg", "Simulations per root move"))
     parts.append(slot("search-volume"))
 
@@ -386,6 +426,16 @@ def render(document, sections, figure_names, run_meta=None):
               _pct(r["share"])]
              for r in sorted(document["search_time"],
                              key=lambda r: -r["seconds"])]))
+    if document.get("branching_factor"):
+        parts.append("\n**Observed branching factor** - measured at the "
+                     "positions the agents actually reached, not from random "
+                     "self-play, which visits states real games never see\n")
+        parts.append(_table(
+            ["game", "config", "mean", "median", "p95", "decisions"],
+            [[r["game"], r["config"], "%.1f" % r["mean"],
+              "%.1f" % r["median"], "%.1f" % r["p95"], r["moves"]]
+             for r in document["branching_factor"]]))
+
     parts.append("\n-> End-reason breakdown: [E4](#e4-end-reasons).\n")
     parts.append(slot("game-characteristics"))
 
