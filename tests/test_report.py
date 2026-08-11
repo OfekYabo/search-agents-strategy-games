@@ -408,5 +408,38 @@ class SelfplayReportTest(unittest.TestCase):
         self.assertIn("No games found", selfplay_report.render([], "test"))
 
 
+
+
+class SelfplayCommentaryTest(unittest.TestCase):
+    """The self-play report uses the same sidecar mechanism as the main
+    report, so interpretation written for the paper survives a rerun."""
+
+    def _rows(self):
+        return [{"game": "ataxx", "agent": "mcts", "plies": "40",
+                 "first_budget_s": "2", "second_budget_s": "0.5",
+                 "winner": "first"}]
+
+    def test_unfilled_slots_render_visible_callouts(self):
+        from experiments import selfplay_report
+        text = selfplay_report.render(self._rows(), "MCTS")
+        for section_id in selfplay_report.SECTION_IDS:
+            self.assertIn("COMMENTARY NEEDED: %s" % section_id, text)
+
+    def test_filled_prose_replaces_the_callout(self):
+        from experiments import selfplay_report
+        text = selfplay_report.render(
+            self._rows(), "MCTS",
+            sections={"selfplay-results": "More time clearly helps."})
+        self.assertIn("More time clearly helps.", text)
+        self.assertNotIn("COMMENTARY NEEDED: selfplay-results", text)
+
+    def test_an_unknown_section_id_is_an_error(self):
+        from experiments import report as report_module
+        from experiments import selfplay_report
+        with self.assertRaises(ValueError):
+            report_module.validate_commentary(
+                {"no-such-slot": "x"}, selfplay_report.SECTION_IDS)
+
+
 if __name__ == "__main__":
     unittest.main()

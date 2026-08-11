@@ -102,6 +102,7 @@ step "time-selfplay/mcts" 7200 \
 step "selfplay-report/mcts" 600 \
     python3 -m experiments.selfplay_report \
         --raw "$DIR/results/v3/time-selfplay-mcts" --label "MCTS" \
+        --commentary "$DIR/docs/report/commentary-selfplay-mcts.md" \
         --out "$DIR/results/v3/selfplay-mcts.md"
 
 step "time-selfplay/alpha_beta" 7200 \
@@ -112,6 +113,7 @@ step "time-selfplay/alpha_beta" 7200 \
 step "selfplay-report/alpha_beta" 600 \
     python3 -m experiments.selfplay_report \
         --raw "$DIR/results/v3/time-selfplay-alpha_beta" --label "Alpha-Beta" \
+        --commentary "$DIR/docs/report/commentary-selfplay-alpha_beta.md" \
         --out "$DIR/results/v3/selfplay-alpha_beta.md"
 
 say "=================================================================="

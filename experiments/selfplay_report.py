@@ -19,6 +19,15 @@ import os
 import sys
 
 from experiments.analyse import wilson_interval
+from experiments.report import commentary_for, parse_commentary, \
+    validate_commentary
+
+# Same sidecar mechanism as the main report: generated content is disposable
+# and regenerated from scratch, hand-written interpretation lives in its own
+# file and is merged in by id. Without this the only prose here would be
+# generated, and there would be nowhere to put a reading of the numbers that
+# survives the next run.
+SECTION_IDS = ("selfplay-overview", "selfplay-results")
 
 
 def load(raw_dir):
@@ -62,8 +71,9 @@ def budget_pairs(rows):
     return out
 
 
-def render(rows, label):
-    # type: (list, str) -> str
+def render(rows, label, sections=None):
+    # type: (list, str, dict) -> str
+    sections = sections or {}
     if not rows:
         return "# Self-play time scaling: %s\n\nNo games found.\n" % label
 
@@ -78,6 +88,7 @@ def render(rows, label):
                  "streams, so a result cannot come from seat advantage or from "
                  "one side consuming the other's random numbers.\n"
                  % ", ".join(agents))
+    parts.append("\n" + commentary_for(sections, "selfplay-overview") + "\n")
     parts.append("\n**Score is from the point of view of the side with the "
                  "LARGER budget.** 0.500 means extra time bought nothing; an "
                  "interval that excludes 0.500 means it bought something "
@@ -110,6 +121,8 @@ def render(rows, label):
                  "against itself. It isolates the budget axis alone, which the "
                  "main tournament cannot do because there both the agent and "
                  "the budget change together.\n")
+
+    parts.append("\n" + commentary_for(sections, "selfplay-results") + "\n")
     return "\n".join(parts) + "\n"
 
 
@@ -118,10 +131,22 @@ def main(argv=None):
     parser.add_argument("--raw", required=True)
     parser.add_argument("--out", default="")
     parser.add_argument("--label", default="")
+    parser.add_argument("--commentary", default="")
     args = parser.parse_args(argv)
 
+    sections = {}
+    if args.commentary and os.path.exists(args.commentary):
+        with open(args.commentary) as handle:
+            sections = parse_commentary(handle.read())
+    validate_commentary(sections, SECTION_IDS)
+
     rows = load(args.raw)
-    text = render(rows, args.label or os.path.basename(args.raw.rstrip("/")))
+    text = render(rows, args.label or os.path.basename(args.raw.rstrip("/")),
+                  sections=sections)
+    missing = [i for i in SECTION_IDS if not sections.get(i)]
+    if missing:
+        sys.stderr.write("warning: %d commentary section(s) unfilled: %s\n"
+                         % (len(missing), ", ".join(missing)))
     if args.out:
         directory = os.path.dirname(args.out)
         if directory:
