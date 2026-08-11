@@ -3,19 +3,21 @@
 #
 #   multipass exec tournament -- /home/ubuntu/search-agents-strategy-games/status.sh
 #
-# Prints service state, progress toward 2700 games, throughput, ETA, and
-# explicit STALL / RESTART-LOOP verdicts so no interpretation is needed.
+# Prints suite state, progress toward 2700 games in the MAIN GRID, throughput,
+# ETA, and explicit STALL / WRONG-VERSION verdicts so no interpretation is
+# needed. The optional time-selfplay experiments run before the grid and do not
+# appear in the game count; see results/v3/suite.log for their progress.
 
 DIR=/home/ubuntu/search-agents-strategy-games
-RAW=$DIR/results/v2
-LOG=$DIR/results/tournament.log
+RAW=$DIR/results/v3/raw
+LOG=$DIR/results/v3/suite.log
 TOTAL=2700
 
 # What this run is SUPPOSED to be. Checked against three independent places
 # below, because the version is invisible at the point you type
 # `systemctl start` - it is baked into the unit's ExecStart - and finding out
 # after ten hours that the wrong agents ran is the expensive way to learn it.
-EXPECT_VERSION=v2
+EXPECT_VERSION=v3
 
 # Games are only counted once their commit marker (the games.csv row) is
 # durable, so this never over-reports work that a crash would discard.
@@ -28,11 +30,11 @@ else
 fi
 [ "$DONE" -lt 0 ] && DONE=0
 
-STATE=$(systemctl is-active tournament)
-ENABLED=$(systemctl is-enabled tournament 2>/dev/null)
-NRESTARTS=$(systemctl show tournament -p NRestarts --value)
-RESULT=$(systemctl show tournament -p Result --value)
-START=$(systemctl show tournament -p ExecMainStartTimestamp --value)
+STATE=$(systemctl is-active v3-suite)
+ENABLED=$(systemctl is-enabled v3-suite 2>/dev/null)
+NRESTARTS=$(systemctl show v3-suite -p NRestarts --value)
+RESULT=$(systemctl show v3-suite -p Result --value)
+START=$(systemctl show v3-suite -p ExecMainStartTimestamp --value)
 
 echo "=============================================================="
 echo " TOURNAMENT STATUS            $(date '+%Y-%m-%d %H:%M:%S %Z')"
@@ -44,8 +46,11 @@ echo " started : $START"
 # Three independent sources. The unit says what was configured, run_meta
 # says what the process recorded at startup, and games.csv says what the
 # finished games were actually played with. Agreement is the check.
-UNIT_VERSION=$(systemctl cat tournament 2>/dev/null \
-    | sed -n 's/.*--agent-version[= ]\([^ ]*\).*/\1/p' | head -1)
+# The suite runs a script, so the configured version lives in the script's
+# main-grid step, not in the unit's ExecStart. Reading the unit would pick up
+# whichever stale tournament.service happens to still exist.
+UNIT_VERSION=$(sed -n 's/.*--agent-version[= ]\([^ ]*\).*/\1/p' \
+    "$DIR/run_v3_suite.sh" | head -1)
 [ -z "$UNIT_VERSION" ] && UNIT_VERSION="v1(default)"
 
 META_VERSION="-"
@@ -81,8 +86,8 @@ if [ -n "$VERSION_BAD" ]; then
     echo " >>> WRONG AGENT VERSION: $VERSION_BAD"
     echo "     Expected $EXPECT_VERSION. STOP NOW rather than spend ten hours"
     echo "     measuring the wrong agents:"
-    echo "       sudo systemctl stop tournament"
-    echo "     Then check ExecStart in /etc/systemd/system/tournament.service,"
+    echo "       sudo systemctl stop v3-suite"
+    echo "     Then check the main-grid step in run_v3_suite.sh,"
     echo "     and delete $RAW before restarting - a resumed run would keep the"
     echo "     games already played with the wrong version."
 fi
@@ -99,7 +104,7 @@ for i in $(seq 1 50); do [ "$i" -le "$FILLED" ] && printf "#" || printf "."; don
 printf "]\n"
 
 # Throughput and ETA, measured over the service's current uptime.
-SEC=$(systemctl show tournament -p ExecMainStartTimestampMonotonic --value)
+SEC=$(systemctl show v3-suite -p ExecMainStartTimestampMonotonic --value)
 NOW=$(awk '{printf "%d", $1*1000000}' /proc/uptime)
 ELAPSED=$(( (NOW - SEC) / 1000000 ))
 # Only meaningful with no restarts: ExecMainStartTimestamp resets on restart
@@ -115,8 +120,8 @@ elif [ "$STATE" = "active" ] && [ "$ELAPSED" -gt 60 ] && [ "$DONE" -gt 0 ]; then
     ETAH=$(awk "BEGIN{printf \"%.1f\", $LEFT*$ELAPSED/($DONE*3600)}")
     echo " rate    : $RATE games/h over $(( ELAPSED / 60 )) min   ETA: ~${ETAH} h  ($LEFT left)"
     echo "           NOTE: early games are Isolation (fast). Rate will FALL as the"
-    echo "           schedule reaches UTTT and Ataxx. Expect ~9.9 h total, not the"
-    echo "           first-hour extrapolation."
+    echo "           schedule reaches UTTT and Ataxx. Expect ~12-15 h for the V3"
+    echo "           grid alone - Ataxx games are ~60% longer than V2."
 fi
 echo " last write to games.csv: ${AGE}s ago"
 echo
@@ -124,25 +129,28 @@ echo
 # ---- verdicts -------------------------------------------------------
 VERDICT="OK"
 if [ "$DONE" -ge "$TOTAL" ]; then
-    echo " >>> COMPLETE. All $TOTAL games present. Next step: run the analysis."
-    echo "     python3 -m experiments.analyse --raw results/v2 \\"
-echo "             --json results/v2/analysis.json --label v2-tournament"
-echo "     python3 -m experiments.report --analysis results/v2/analysis.json \\"
-echo "             --out results/v2/report.md --figures results/v2/figures \\"
-echo "             --run-meta results/v2/run_meta.json"
+    echo " >>> COMPLETE. All $TOTAL games present."
+    echo "     The suite runs the analysis and report itself; check for"
+    echo "     results/v3/report.md. If it is missing, run:"
+    echo "       python3 -m experiments.analyse --raw results/v3/raw \\"
+    echo "               --json results/v3/analysis.json --label v3-tournament"
+    echo "       python3 -m experiments.report --analysis results/v3/analysis.json \\"
+    echo "               --out results/v3/report.md --figures results/v3/figures \\"
+    echo "               --commentary docs/report/commentary-v3.md \\"
+    echo "               --run-meta results/v3/raw/run_meta.json"
     VERDICT="DONE"
 elif [ "$STATE" = "failed" ]; then
     echo " >>> FAILED. The unit gave up (likely start-limit-hit: 5 crashes in 10 min)."
     echo "     Diagnose first:  tail -40 $LOG"
-    echo "     Then resume   :  sudo systemctl reset-failed tournament && sudo systemctl start tournament"
+    echo "     Then resume   :  sudo systemctl reset-failed v3-suite && sudo systemctl start v3-suite"
     VERDICT="FAILED"
 elif [ "$STATE" != "active" ]; then
-    echo " >>> NOT RUNNING (state=$STATE). Start it:  sudo systemctl start tournament"
+    echo " >>> NOT RUNNING (state=$STATE). Start it:  sudo systemctl start v3-suite"
     VERDICT="STOPPED"
 elif [ "$AGE" -gt 1800 ]; then
     echo " >>> STALLED. No completed game for ${AGE}s. Even the worst legal case"
     echo "     (Ataxx easy, 2 budgeted seats, 300-ply cap) is ~600s, so this is wrong."
-    echo "     Restart is safe - resume is crash-safe:  sudo systemctl restart tournament"
+    echo "     Restart is safe - resume is crash-safe:  sudo systemctl restart v3-suite"
     VERDICT="STALLED"
 elif [ "$AGE" -gt 900 ]; then
     echo " >>> SLOW but probably fine. ${AGE}s since the last game. A long Ataxx-easy"
