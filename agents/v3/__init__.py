@@ -1,6 +1,6 @@
 """Agent version v3.
-Currently identical to v2 - no improvement has been made yet. This package
-is where the next round of agent changes goes.
+V3 contains the post-V2 search-efficiency and instrumentation changes. V1/V2
+remain untouched so their published tournament runs stay reproducible.
 
 
 Hyperparameters live here rather than in the harness, because they are
@@ -21,9 +21,15 @@ VERSION = "v3"
 
 AGENTS = ("random", "heuristic", "alpha_beta", "mcts")
 
-# Alpha-Beta entries and MCTS nodes are different sizes, so these are separate
-# numbers calibrated to comparable byte footprints - never one shared value.
+# Alpha-Beta entries and MCTS nodes are different structures, so V3 treats the
+# experiment as memory-bounded rather than claiming equality in bytes. The
+# caps are intentionally reported in each structure's native unit.
 CAPS = {"max_entries": 200000, "max_nodes": 50000}
+
+# V1/V2 used one Random instance for both seats. V3 isolates stochastic
+# streams per side so giving one agent more search time cannot consume random
+# numbers that would otherwise have been used by its opponent.
+SEPARATE_RNG_STREAMS = True
 
 # Selected by calibrate.py phase 3, not assumed. epsilon=1.0 with sample_k=1
 # means pure random rollouts: no evaluator call inside the playout at all.
@@ -43,6 +49,7 @@ def params(label):
     if label == "mcts":
         out = {"max_nodes": CAPS["max_nodes"]}
         out.update(MCTS_ROLLOUT)
+        out["tree_reuse"] = True
         return out
     return {}
 

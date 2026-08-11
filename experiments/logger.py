@@ -18,6 +18,8 @@ GAME_COLUMNS = [
     # different caps - these can, and carry the rollout parameters too.
     "agent_first_version", "agent_second_version",
     "agent_first_params", "agent_second_params",
+    # Appended metadata only; legacy column positions remain unchanged.
+    "experiment",
 ]
 
 # nodes and simulations are deliberately separate: an Alpha-Beta node is a
@@ -26,6 +28,10 @@ GAME_COLUMNS = [
 MOVE_COLUMNS = [
     "game_id", "ply", "agent", "side", "tag", "elapsed_s",
     "nodes", "simulations", "depth", "move", "legal_move_count",
+    # V3 search-structure diagnostics. Appended so all legacy columns retain
+    # their positions and old analysis code can ignore the new fields.
+    "tt_lookups", "tt_hits", "tt_size",
+    "mcts_tree_nodes", "mcts_reused_nodes",
 ]
 
 
@@ -130,6 +136,13 @@ class GameLogger:
                 "depth": "" if move.depth is None else move.depth,
                 "move": move.move,
                 "legal_move_count": move.legal_move_count,
+                "tt_lookups": "" if move.tt_lookups is None else move.tt_lookups,
+                "tt_hits": "" if move.tt_hits is None else move.tt_hits,
+                "tt_size": "" if move.tt_size is None else move.tt_size,
+                "mcts_tree_nodes": ("" if move.mcts_tree_nodes is None
+                                    else move.mcts_tree_nodes),
+                "mcts_reused_nodes": ("" if move.mcts_reused_nodes is None
+                                       else move.mcts_reused_nodes),
             })
         self._moves_file.flush()
         self._games.writerow({
@@ -150,6 +163,7 @@ class GameLogger:
             "agent_second_version": record.agent_second_version,
             "agent_first_params": record.agent_first_params,
             "agent_second_params": record.agent_second_params,
+            "experiment": record.experiment,
         })
         self._games_file.flush()
 

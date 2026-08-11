@@ -40,10 +40,9 @@ class VersionIntegrityTest(unittest.TestCase):
                                  "%s.%s declares %r" % (package, name,
                                                         module.VERSION))
 
-    def test_v3_starts_as_a_faithful_clone_of_v2(self):
-        """v3 is the next version to be improved. Until someone changes it, it
-        must behave exactly like v2, or the first comparison will measure a
-        transcription error rather than an improvement."""
+    def test_v3_keeps_the_same_roster_caps_and_rollout_family(self):
+        """V3 deliberately changes search behaviour, but not the compared
+        agent roster, memory-bound sizes or calibrated rollout policy."""
         import random
         from agents import v2, v3, base
         from evaluation.v2 import isolation_eval as e2
@@ -64,6 +63,11 @@ class VersionIntegrityTest(unittest.TestCase):
                     random.Random(3))
             self.assertEqual(m2, m3)
             state = isolation.apply_move(state, m2)
+
+    def test_v3_declares_the_deliberate_rng_and_tree_reuse_changes(self):
+        from agents import v3
+        self.assertTrue(v3.SEPARATE_RNG_STREAMS)
+        self.assertTrue(v3.params("mcts")["tree_reuse"])
 
 
 if __name__ == "__main__":

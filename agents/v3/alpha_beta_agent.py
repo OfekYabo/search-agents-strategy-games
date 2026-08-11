@@ -1,6 +1,5 @@
 # Agent version v3. See docs/VERSIONING.md - frozen once a tournament has
 # run against it. Any fix after that is a new version, not an edit here.
-# Identical to v1 - no change has been made yet.
 """Enhanced Alpha-Beta: negamax, iterative deepening, move ordering, capped
 transposition table.
 
@@ -35,15 +34,13 @@ per-move event. A high memory-limited fraction in the study's results should
 be read as "the table saturated early in some games," not as "many
 independent moves each happened to hit a cap."
 
-`max_entries` is this agent's memory cap. It is set once, at construction,
-from the config's `max_entries` key, and is never read from
+`max_entries` is this agent's bounded-memory cap. It is set once, at
+construction, from the config's `max_entries` key, and is never read from
 SearchContext.max_nodes (SearchContext.max_nodes is informational only - see
-agents/base.py). It is deliberately *not* the same number as MCTS's
-`max_nodes`: a transposition entry here is a fixed 4-tuple, while an MCTS
-tree node holds a full game state, a child mapping and counters - plausibly
-five times the size per entry - so the two caps must be calibrated
-separately to equal byte footprints (docs/spec/technical-spec.md section
-4.2b), not treated as interchangeable counts.
+agents/base.py). It is deliberately *not* treated as numerically equivalent
+to MCTS's `max_nodes`: the two algorithms store different data structures, so
+the experiment reports each cap in the natural unit of that structure rather
+than claiming that equal counts imply equal bytes.
 """
 import itertools
 from typing import Any
@@ -86,6 +83,7 @@ def make(evaluate, max_entries=200000, max_depth=64):
         # a full MCTS rollout) are expensive enough that even checking every
         # single one adds no meaningful overhead.
         ctx.set_check_every(16)
+        ctx.set_tt_size(len(table))
         best_move = None
 
         for depth in itertools.count(1):
@@ -107,6 +105,7 @@ def make(evaluate, max_entries=200000, max_depth=64):
             if ctx.should_stop():
                 break
 
+        ctx.set_tt_size(len(table))
         if best_move is None:               # cut off before depth 1 finished
             return rng.choice(game.legal_moves(state))
         return best_move
@@ -144,12 +143,18 @@ def _negamax(game, state, depth, alpha, beta, ctx, table, evaluate, cap):
         raise _Timeout
     ctx.note_node()
 
-    if game.is_terminal(state):
+    # legal_moves() is the terminal oracle for all three game modules. The
+    # previous implementation called game.is_terminal(state), which itself
+    # regenerated the legal moves, and then regenerated them a second time
+    # below. Reuse the one list throughout this node instead.
+    moves = game.legal_moves(state)
+    if not moves:
         return game.result(state)
     if depth <= 0:
         return evaluate(game, state)
 
     entry = table.get(state)
+    ctx.note_tt_lookup(entry is not None)
     if entry is not None:
         e_depth, e_value, e_flag, _ = entry
         if e_depth >= depth:
@@ -163,7 +168,7 @@ def _negamax(game, state, depth, alpha, beta, ctx, table, evaluate, cap):
                 return e_value
 
     original_alpha = alpha
-    moves = _ordered(game, state, table)
+    moves = _ordered(game, state, table, moves)
     best_value, best_move = -_INF, moves[0]
 
     for move in moves:
@@ -195,13 +200,14 @@ def _negamax(game, state, depth, alpha, beta, ctx, table, evaluate, cap):
     return best_value
 
 
-def _ordered(game, state, table):
+def _ordered(game, state, table, moves=None):
     """Legal moves with the table's best move first.
 
     Everything after that keeps the game's own ordering, which each game module
     already returns in a heuristically sensible order.
     """
-    moves = game.legal_moves(state)
+    if moves is None:
+        moves = game.legal_moves(state)
     entry = table.get(state)
     if entry is None:
         return moves

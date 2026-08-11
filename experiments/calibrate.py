@@ -99,9 +99,10 @@ def sweep_memory_caps(game, ev, budget, caps, agent="alpha_beta", plies=40):
     # type: (Any, Any, float, Tuple[int, ...], str, int) -> List[CapResult]
     """Choose the cap at which `memory-limited` is a meaningful minority.
 
-    The two agents' caps are NOT interchangeable: a transposition entry is a
-    4-tuple while an MCTS node holds a full state, a child mapping and counters.
-    They are swept separately and calibrated to comparable byte footprints.
+    The two agents' caps are NOT interchangeable: a transposition entry and an
+    MCTS tree node are different structures. Sweep them separately and choose
+    useful bounded-memory operating points; do not interpret equal counts as
+    equal memory in bytes.
     """
     out = []
     for cap in caps:

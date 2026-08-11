@@ -8,7 +8,7 @@ Course project - Search Methods in Artificial Intelligence (237-2-5513), Ben-Gur
 
 ## Research Question
 
-How do exact tree search and sampling-based search compare in playing strength, efficiency, and degradation behavior as state-space size increases, when both are constrained by the same realistic per-move time and memory budget?
+How do exact tree search and sampling-based search compare in playing strength, efficiency, and degradation behavior as state-space size and branching factor change, when both operate under controlled per-move time budgets and explicit bounded-memory constraints?
 
 ---
 
@@ -33,7 +33,7 @@ Isolation 5x5 is a **declared variant** of the 1972 original, not the published 
 | Enhanced Alpha-Beta | Exact tree search |
 | MCTS / UCT | Sampling-based search |
 
-All search agents operate under a shared per-move time budget and a bounded memory footprint. Each move is tagged as **normal**, **time-limited**, or **memory-limited** to explain performance differences, not only report them.
+All search agents operate under a shared per-move time budget and explicit bounded-memory constraints. Alpha-Beta is bounded by transposition-table entries and MCTS by active tree nodes; these native units are reported separately rather than treated as byte-equivalent. Each move is tagged as **normal**, **time-limited**, or **memory-limited** to explain performance differences, not only report them.
 
 Agents are **versioned**, and a version is frozen once a tournament has run against it — a fix becomes a new version rather than an edit. `agents/` is v1 (frozen, published in `results/report.md`); `agents/v2/` and `agents/v3/` are the live versions. Read [`docs/VERSIONING.md`](docs/VERSIONING.md) before changing any agent.
 
@@ -46,7 +46,7 @@ Agents are **versioned**, and a version is frozen once a tournament has run agai
 **Reproducing the figures** needs `matplotlib` and `numpy` (`requirements-analysis.txt`). They are imported only by `experiments/analyse.py`, `experiments/report.py` and `experiments/figures.py`, never by the measurement path.
 
 ```bash
-python3 -m unittest discover -s tests            # 228 tests, no dependencies
+python3 -m unittest discover -s tests            # 273 tests, no dependencies
 
 python3 -m experiments.analyse --raw results/raw \
         --json results/analysis.json --label v1-tournament
@@ -61,7 +61,7 @@ The report is regenerated from scratch every time and is byte-identical for iden
 
 - Round-robin tournament: 6 unique agent pairings per game, both agents starting first an equal number of times
 - First-move advantage tracked explicitly
-- Three time/memory budget configurations per game: easy, balanced, and hard (calibrated via a pilot sweep)
+- Three time-budget configurations per game: easy, balanced, and hard, plus fixed bounded-memory caps for the two search structures
 - All results logged to CSV; tables and graphs generated programmatically
 
 ---
@@ -70,6 +70,7 @@ The report is regenerated from scratch every time and is byte-identical for iden
 
 - Win / loss / draw rate per agent, per game, per budget configuration
 - Average move time, nodes expanded, simulations run
+- Alpha-Beta TT hit/occupancy diagnostics and MCTS active/reused tree nodes (V3)
 - Move-tag distribution (normal / time-limited / memory-limited)
 - Scaling behavior across games and budget configurations
 

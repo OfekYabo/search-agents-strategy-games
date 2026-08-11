@@ -21,8 +21,9 @@ from experiments.logger import GameLogger
 
 AGENTS = ("random", "heuristic", "alpha_beta", "mcts")
 
-# Alpha-Beta entries and MCTS nodes are different sizes, so these are separate
-# numbers calibrated to comparable byte footprints - never one shared value.
+# Historical V1 harness caps. From V2 onward the selected version package owns
+# its own caps. They are bounds in each algorithm's native search-structure
+# unit, not a claim of equal bytes.
 CAPS = {"max_entries": 200000, "max_nodes": 50000}
 
 # MCTS rollout parameters, selected by calibrate.py phase 3 rather than assumed.
@@ -123,6 +124,8 @@ class _V1Source(object):
 
     VERSION = "v1"
     AGENTS = AGENTS
+    CAPS = CAPS
+    SEPARATE_RNG_STREAMS = False
 
     @staticmethod
     def build(label, evaluate):
@@ -277,6 +280,7 @@ def write_run_meta(path, version, games, configs, trials, schedule_size):
 
     meta = {
         "source": "recorded",
+        "experiment": "main_tournament",
         "agent_version": version,
         "games": list(games),
         "configs": list(configs),
@@ -285,6 +289,9 @@ def write_run_meta(path, version, games, configs, trials, schedule_size):
         "budgets": dict((g, dict(BUDGETS[g])) for g in games),
         "roster": dict((label, source.params(label))
                        for label in source.AGENTS),
+        "rng_streams": ("per_side" if getattr(source,
+                                               "SEPARATE_RNG_STREAMS", False)
+                        else "shared"),
         "python": start["python"],
         "platform": start["platform"],
         "host": host_info(),
@@ -301,20 +308,26 @@ def write_run_meta(path, version, games, configs, trials, schedule_size):
 
 def run(schedule, out_dir, workers=1, resume=True, version="v1"):
     # type: (List[Cell], str, int, bool) -> int
+    if workers != 1:
+        raise ValueError(
+            "Parallel tournament execution is disabled for experimental "
+            "validity; use --workers 1.")
+
     games_path = os.path.join(out_dir, "games.csv")
     moves_path = os.path.join(out_dir, "moves.csv")
     logger = GameLogger(games_path, moves_path)
     done = logger.completed_ids() if resume else set()
 
     source = agent_source(version)
+    caps = getattr(source, "CAPS", CAPS)
     played = 0
     for index, cell in enumerate(schedule):
         game = _game_module(cell.game)
         ev = evaluator_source(version, cell.game)
         budget = BUDGETS[cell.game][cell.config]
         config = {"name": cell.config, "time_budget_s": budget,
-                  "max_nodes": CAPS["max_nodes"],
-                  "max_entries": CAPS["max_entries"]}
+                  "max_nodes": caps["max_nodes"],
+                  "max_entries": caps["max_entries"]}
         seed = runner.game_seed(cell.game, cell.agent_first, cell.agent_second,
                                 cell.config, cell.trial)
         # Same function the runner uses - never re-derive the format here, or
@@ -330,7 +343,9 @@ def run(schedule, out_dir, workers=1, resume=True, version="v1"):
             ply_cap=300, trial=cell.trial, workers=workers,
             agent_versions=(version, version),
             agent_params=(source.params(cell.agent_first),
-                          source.params(cell.agent_second)))
+                          source.params(cell.agent_second)),
+            separate_rng_streams=getattr(source, "SEPARATE_RNG_STREAMS",
+                                         False))
         logger.write(record)
         played += 1
         if played % 20 == 0:
@@ -346,7 +361,10 @@ def main(argv=None):
     parser.add_argument("--configs", default="all")
     parser.add_argument("--trials", type=int, default=20)
     parser.add_argument("--out", default="results/raw")
-    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument(
+        "--workers", type=int, default=1,
+        help="must remain 1; parallel execution is disabled for fair "
+             "wall-clock-budget experiments")
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--agent-version", dest="agent_version",
                         default="v1")

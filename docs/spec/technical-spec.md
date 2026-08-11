@@ -329,20 +329,18 @@ implying it governed both. Nothing would have crashed or failed.
 `mcts_agent.make(evaluate, max_nodes=config["max_nodes"])` per game.
 
 **The two caps are separate config keys, and equal counts are not equal memory.**
-`max_entries` (Alpha-Beta) and `max_nodes` (MCTS) must be **calibrated to comparable
-byte footprints**, not set to the same number. A transposition-table entry is a
-4-tuple of `(depth, value, flag, best_move)`; an MCTS tree node holds a full game
-state, a child mapping, a visit count and a value accumulator - plausibly five times
-the size or more.
+`max_entries` (Alpha-Beta) and `max_nodes` (MCTS) are explicit bounded-memory
+constraints in the native units of the two search structures. A transposition-table
+entry and an MCTS node contain different objects, so the study does **not** claim that
+their counts or byte footprints are identical.
 
-> **Why this is not a detail.** The research question promises "the same realistic
-> per-move **time and memory** budget". If the two agents are capped at equal object
-> *counts*, that promise is false and the memory axis of the comparison is
-> meaningless - while every table still looks perfectly normal. Pilot phase 2
-> therefore measures the actual per-object footprint of each structure (`sys.getsizeof`
-> over a populated sample, including the contained state) and sets the two caps so the
-> **byte budgets match**. Report both the byte budget and the resulting entry and node
-> counts, so a reader can see the conversion rather than trust it.
+> **Interpretation.** Time is the directly shared resource axis: all agents in a
+> condition receive the same per-move wall-clock budget. Memory is controlled by
+> stable, reported structure-specific bounds. The analysis therefore asks how each
+> algorithm behaves when memory is bounded, not whether equal physical RAM was
+> allocated to two incomparable internal representations. V3 additionally records TT
+> occupancy/hit counts and MCTS active/reused nodes so the effect of those bounds is
+> observable rather than inferred from the tag alone.
 
 ### 4.3 Tag precedence **[SIGN-OFF]**
 

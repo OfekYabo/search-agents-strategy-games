@@ -32,6 +32,14 @@ class Decision:
     simulations: Optional[int]
     depth: Optional[int]
     error: Optional[str]
+    # V3 diagnostic instrumentation. These stay None for agents/versions
+    # that do not publish the corresponding metric, so old analyses are not
+    # forced to interpret a synthetic zero as an observation.
+    tt_lookups: Optional[int] = None
+    tt_hits: Optional[int] = None
+    tt_size: Optional[int] = None
+    mcts_tree_nodes: Optional[int] = None
+    mcts_reused_nodes: Optional[int] = None
 
 
 class SearchContext:
@@ -74,6 +82,17 @@ class SearchContext:
         self.finished = False
         self.depth_reached = None
 
+        # Optional search-structure instrumentation. The boolean flags let
+        # decide() distinguish "this agent measured zero" from "this agent
+        # does not expose this metric".
+        self.tt_lookups = 0
+        self.tt_hits = 0
+        self.tt_size = 0
+        self.mcts_tree_nodes = 0
+        self.mcts_reused_nodes = 0
+        self._tracks_tt = False
+        self._tracks_mcts_tree = False
+
     def set_check_every(self, n):
         # type: (int) -> None
         """Request finer polling granularity than the node-search default.
@@ -106,6 +125,32 @@ class SearchContext:
     def note_simulation(self):
         # type: () -> None
         self.simulations += 1
+
+    def note_tt_lookup(self, hit=False):
+        # type: (bool) -> None
+        """Record one transposition-table probe and whether it hit."""
+        self._tracks_tt = True
+        self.tt_lookups += 1
+        if hit:
+            self.tt_hits += 1
+
+    def set_tt_size(self, size):
+        # type: (int) -> None
+        """Record the table occupancy at the end of this decision."""
+        self._tracks_tt = True
+        self.tt_size = int(size)
+
+    def set_mcts_tree_nodes(self, size):
+        # type: (int) -> None
+        """Record the active MCTS tree size for this decision."""
+        self._tracks_mcts_tree = True
+        self.mcts_tree_nodes = int(size)
+
+    def set_mcts_reused_nodes(self, size):
+        # type: (int) -> None
+        """Record how many nodes were retained from the previous turn."""
+        self._tracks_mcts_tree = True
+        self.mcts_reused_nodes = int(size)
 
     def hit_memory_cap(self):
         # type: () -> None
@@ -177,4 +222,11 @@ def decide(agent, game, state, time_budget_s, max_nodes, rng,
         simulations=ctx.simulations if ctx.simulations else None,
         depth=getattr(ctx, "depth_reached", None),
         error=error,
+        tt_lookups=ctx.tt_lookups if ctx._tracks_tt else None,
+        tt_hits=ctx.tt_hits if ctx._tracks_tt else None,
+        tt_size=ctx.tt_size if ctx._tracks_tt else None,
+        mcts_tree_nodes=(ctx.mcts_tree_nodes
+                         if ctx._tracks_mcts_tree else None),
+        mcts_reused_nodes=(ctx.mcts_reused_nodes
+                           if ctx._tracks_mcts_tree else None),
     )

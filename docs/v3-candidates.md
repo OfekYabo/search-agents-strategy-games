@@ -11,18 +11,30 @@ run you will be compared against.
 
 ## Where things stand
 
-v3 currently behaves **exactly** like v2. A test asserts it
-(`tests/test_versions.py::test_v3_starts_as_a_faithful_clone_of_v2`), so that the first
-v2-versus-v3 comparison measures your change rather than a transcription error.
+V3 is now the active development version and deliberately differs from V2. V1/V2 stay
+frozen. The selected V3 changes are:
 
-v2 differs from v1 in exactly one behaviour: the one-ply heuristic agent no longer
-declines an immediate win.
+- Ataxx evaluator weights: material/exposure **0.47/0.53** instead of 0.70/0.30.
+- independent RNG streams per seat, so one stochastic agent cannot consume random
+  numbers that would otherwise have belonged to its opponent;
+- MCTS subtree reuse between consecutive decisions of the same agent;
+- bounded-memory diagnostics (TT probes/hits/occupancy and active/reused MCTS nodes);
+- duplicate `legal_moves()` removal from Alpha-Beta, MCTS rollout, and the game runner;
+- explicit rejection of `workers > 1` in the main tournament, keeping wall-clock
+  resource comparisons sequential;
+- an optional, separate `experiments/time_budget_selfplay.py` experiment for comparing
+  the same search algorithm against itself under unequal time budgets.
+
+Isolation and UTTT evaluators remain unchanged. Screening found promising static
+Isolation alternatives, but their extra evaluation cost reduced Alpha-Beta search
+depth enough that no search-level improvement was established. UTTT candidates did
+not reliably outperform the existing evaluator.
 
 ---
 
-## Candidate 1: the Isolation evaluator
+## Isolation evaluator screening (not selected for V3)
 
-**The strongest lead, already written and measured.**
+This remains useful background, but V3 intentionally keeps the existing evaluator.
 
 The v1 report found the heuristic agent scoring only **0.750 against the random agent
 on Isolation**, against 0.963 on UTTT and 1.000 on Ataxx. Isolation is the designated
@@ -93,7 +105,15 @@ Two results worth knowing before you theorise:
 
 ---
 
-## Candidate 2: whatever the V2 results suggest
+## Ataxx evaluator change selected for V3
+
+The existing material/exposure feature set was retained because it is cheap and already
+captures two useful signals. Screening showed that the old 70/30 weighting overvalued
+immediate material. V3 changes only the weights to **47% material / 53% exposure**, so
+the evaluator has essentially identical computational cost while improving the
+one-ply policy in direct screening.
+
+## Other V2 results that motivate V3
 
 Run the V2 report before choosing anything else. `results/v2/report.md` will carry the
 same structure as `results/report.md`, so the two are directly comparable section by
@@ -123,7 +143,7 @@ Two ways, in increasing cost:
 2. **A full v3 grid run** - `--agent-version v3 --out results/v3`, ~10 hours, then
    compare `results/v2/report.md` with `results/v3/report.md` section by section.
 
-A third option exists and is **not yet built**: playing v2 and v3 agents directly
+A third option still exists and is **not yet built**: playing v2 and v3 agents directly
 against each other in one tournament. That is a far more powerful design than comparing
 each against a common field - detecting a 0.10 improvement through field scores needs
 several hundred games per arm, while a paired head-to-head needs far fewer.
@@ -135,8 +155,8 @@ would be analysable once it exists.
 
 ## Resolution: what a run can actually detect
 
-At 25 trials a head-to-head cell holds 40 games, giving a 95% interval of roughly
-±0.13. **A change expected to move a score by less than that will not be visible.** Be
-able to answer, before spending ten hours: what will differ, and is it large enough to
-see? If not, screen it with a targeted head-to-head at far higher repetition instead of
-running the grid.
+At 25 trials and two seat orders, a head-to-head cell holds **50 games**. The resulting
+confidence interval is still wide enough that small effects may not be visible. Be able
+to answer, before spending ten hours: what will differ, and is it large enough to see?
+If not, screen it with a targeted head-to-head at far higher repetition instead of
+using the full grid as the only evidence.

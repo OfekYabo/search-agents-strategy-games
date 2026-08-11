@@ -142,17 +142,18 @@ comparison target; it is the historical baseline whose report is already written
 
 ---
 
-## For whoever is building v3
+## V3 status
 
-`docs/v3-candidates.md` holds the measured leads, the code already written for them,
-and the two caveats that decide how much each is worth. Start there rather than from
-theory - the obvious Isolation improvement (penalise opponent mobility harder) measures
-*worse*, and so does partition detection on its own.
+`docs/v3-candidates.md` now records both the screening work and the changes selected
+for V3: Ataxx evaluator reweighting, per-side RNG streams, bounded-memory
+instrumentation, MCTS subtree reuse, and duplicate `legal_moves()` removal in hot
+search paths. Isolation and UTTT evaluators remain unchanged after screening did not
+show a search-level improvement worth adopting.
 
 ## Deciding whether a change is worth a version
 
 Version numbers are cheap; runs are not. The V2 grid costs about **10 hours**. Before
 creating a version, be able to answer: what measurement will differ, and will the run be
-able to resolve it? With 25 trials a head-to-head cell resolves differences of roughly
-0.13 or larger. A change expected to move a score by 0.02 will not be visible in a grid
-run, and needs a targeted head-to-head run with far more repetitions instead.
+able to resolve it? With 25 trials in both seat orders, a head-to-head cell contains
+50 games and still has fairly wide uncertainty. A small expected effect should be
+screened with a targeted head-to-head rather than justified by the full grid alone.

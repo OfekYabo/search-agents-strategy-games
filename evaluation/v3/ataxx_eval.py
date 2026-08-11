@@ -1,4 +1,5 @@
-# Agent version v3. Identical to v1 - no change has been made yet.
+# Agent version v3. The feature set is unchanged from V2; only the calibrated
+# balance between material and exposure is changed.
 # Frozen once a tournament has run against it; see docs/VERSIONING.md.
 """Ataxx evaluation: material difference plus exposure.
 
@@ -11,8 +12,12 @@ corners are structurally safer, for an entirely different reason than in Othello
 """
 from games.ataxx import CELLS, FULL_MASK, NEIGHBOUR_MASKS
 
-_MATERIAL_WEIGHT = 0.7
-_EXPOSURE_WEIGHT = 0.3
+# Screening against the previous 70/30 evaluator showed that immediate piece
+# count was overweighted. Giving exposure slightly more weight improved the
+# one-ply agent without adding any new feature computation, so Alpha-Beta pays
+# no additional evaluator cost.
+_MATERIAL_WEIGHT = 0.47
+_EXPOSURE_WEIGHT = 0.53
 _SCALE = 0.95          # keeps the result strictly inside (-1, 1)
 _MAX_EXPOSURE = 8.0 * CELLS
 

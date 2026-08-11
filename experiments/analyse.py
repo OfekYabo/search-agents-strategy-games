@@ -368,8 +368,191 @@ def join_moves(games_rows, moves_rows):
         merged["game"] = game["game"]
         merged["config"] = game["config"]
         merged["time_budget_s"] = game["time_budget_s"]
+        merged["max_nodes"] = game.get("max_nodes", "")
+        merged["max_entries"] = game.get("max_entries", "")
         joined.append(merged)
     return joined
+
+
+
+def branching_factor(moves):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Observed legal-action counts from the actual tournament positions.
+
+    The project studies tree width, so the primary branching-factor statistic
+    should come from states the evaluated agents actually reached rather than
+    only from a separate random-self-play probe.  No extra work is performed
+    during search: legal_move_count is already logged for move validation.
+    """
+    buckets = {}
+    for m in moves:
+        raw = m.get("legal_move_count", "")
+        if raw in (None, ""):
+            continue
+        key = (m.get("game", ""), m.get("config", ""))
+        buckets.setdefault(key, []).append(float(raw))
+    out = {}
+    for key, values in buckets.items():
+        values.sort()
+        out[key] = {
+            "moves": len(values),
+            "mean": sum(values) / len(values),
+            "median": _median(values),
+            "p95": _percentile(values, 95),
+        }
+    return out
+
+
+def branching_factor_by_game(moves):
+    # type: (List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]
+    """Observed branching factor pooled over budgets, one row per game."""
+    buckets = {}
+    for m in moves:
+        raw = m.get("legal_move_count", "")
+        if raw in (None, ""):
+            continue
+        buckets.setdefault(m.get("game", ""), []).append(float(raw))
+    out = {}
+    for game, values in buckets.items():
+        values.sort()
+        out[game] = {
+            "moves": len(values),
+            "mean": sum(values) / len(values),
+            "median": _median(values),
+            "p95": _percentile(values, 95),
+        }
+    return out
+
+
+def search_throughput(moves):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Search work completed per second, in each agent's native unit.
+
+    Alpha-Beta nodes and MCTS simulations are deliberately never compared as
+    the same unit.  The output exposes whichever unit the row actually logs.
+    Aggregate throughput uses total work / total elapsed time; the median is
+    the typical per-decision throughput and is useful when positions vary
+    greatly in cost.
+    """
+    buckets = {}
+    for m in moves:
+        elapsed_raw = m.get("elapsed_s", "")
+        if elapsed_raw in (None, ""):
+            continue
+        elapsed = float(elapsed_raw)
+        if elapsed <= 0:
+            continue
+        key = (m.get("game", ""), m.get("config", ""), m.get("agent", ""))
+        e = buckets.setdefault(key, {
+            "nodes": 0.0, "node_seconds": 0.0, "node_rates": [],
+            "simulations": 0.0, "simulation_seconds": 0.0, "simulation_rates": [],
+        })
+        # Keep the throughput table aligned with the paper's search-effort
+        # metrics. Random/one-ply also increment a lightweight node counter,
+        # but "nodes/sec" for those baselines is not a tree-search throughput
+        # measure and would only add noise to the final tables.
+        nodes_raw = m.get("nodes", "")
+        if m.get("agent") == "alpha_beta" and nodes_raw not in (None, ""):
+            units = float(nodes_raw)
+            e["nodes"] += units
+            e["node_seconds"] += elapsed
+            e["node_rates"].append(units / elapsed)
+        sims_raw = m.get("simulations", "")
+        if m.get("agent") == "mcts" and sims_raw not in (None, ""):
+            units = float(sims_raw)
+            e["simulations"] += units
+            e["simulation_seconds"] += elapsed
+            e["simulation_rates"].append(units / elapsed)
+    out = {}
+    for key, e in buckets.items():
+        row = {}
+        if e["node_rates"]:
+            rates = sorted(e["node_rates"])
+            row.update({
+                "nodes_per_second": (e["nodes"] / e["node_seconds"]
+                                     if e["node_seconds"] else 0.0),
+                "median_nodes_per_second": _median(rates),
+                "node_moves": len(rates),
+            })
+        if e["simulation_rates"]:
+            rates = sorted(e["simulation_rates"])
+            row.update({
+                "simulations_per_second": (
+                    e["simulations"] / e["simulation_seconds"]
+                    if e["simulation_seconds"] else 0.0),
+                "median_simulations_per_second": _median(rates),
+                "simulation_moves": len(rates),
+            })
+        if row:
+            out[key] = row
+    return out
+
+
+def search_structure_metrics(moves):
+    # type: (List[Dict[str, Any]]) -> Dict[Any, Dict[str, Any]]
+    """Summarise V3 bounded-memory and reuse instrumentation.
+
+    The two search structures keep their native units. TT entries are never
+    converted into MCTS nodes or vice versa; this table is descriptive, not a
+    claim that the structures have equal byte cost.
+    """
+    buckets = {}
+    for m in moves:
+        key = (m.get("game", ""), m.get("config", ""), m.get("agent", ""))
+        e = buckets.setdefault(key, {
+            "tt_lookups": 0, "tt_hits": 0, "tt_sizes": [],
+            "mcts_tree_nodes": [], "mcts_reused_nodes": [],
+            "mcts_reuse_moves": 0, "mcts_moves": 0,
+        })
+
+        raw = m.get("tt_lookups", "")
+        if raw not in (None, ""):
+            e["tt_lookups"] += int(raw)
+            e["tt_hits"] += int(m.get("tt_hits") or 0)
+            if m.get("tt_size") not in (None, ""):
+                e["tt_sizes"].append(int(m["tt_size"]))
+
+        raw = m.get("mcts_tree_nodes", "")
+        if raw not in (None, ""):
+            e["mcts_moves"] += 1
+            e["mcts_tree_nodes"].append(int(raw))
+            reused = int(m.get("mcts_reused_nodes") or 0)
+            e["mcts_reused_nodes"].append(reused)
+            if reused > 0:
+                e["mcts_reuse_moves"] += 1
+
+    out = {}
+    for key, e in buckets.items():
+        if not (e["tt_sizes"] or e["mcts_tree_nodes"]):
+            continue
+        row = {}
+        if e["tt_sizes"]:
+            sizes = sorted(e["tt_sizes"])
+            row.update({
+                "tt_lookups": e["tt_lookups"],
+                "tt_hits": e["tt_hits"],
+                "tt_hit_rate": (e["tt_hits"] / float(e["tt_lookups"])
+                                if e["tt_lookups"] else 0.0),
+                "median_tt_size": _median(sizes),
+                "max_tt_size": sizes[-1],
+            })
+        if e["mcts_tree_nodes"]:
+            trees = sorted(e["mcts_tree_nodes"])
+            reused = sorted(e["mcts_reused_nodes"])
+            row.update({
+                "median_mcts_tree_nodes": _median(trees),
+                "max_mcts_tree_nodes": trees[-1],
+                "median_mcts_reused_nodes": _median(reused),
+                "mean_mcts_reused_nodes": (sum(reused) / float(len(reused))
+                                           if reused else 0.0),
+                "total_mcts_reused_nodes": sum(reused),
+                "mcts_reuse_moves": e["mcts_reuse_moves"],
+                "mcts_reuse_move_pct": (100.0 * e["mcts_reuse_moves"]
+                                        / e["mcts_moves"]),
+                "mcts_moves": e["mcts_moves"],
+            })
+        out[key] = row
+    return out
 
 
 def search_time(moves):
@@ -471,6 +654,10 @@ def build_analysis(games_rows, moves_rows, label=""):
         + [r["agent_second"] for r in games_rows]))
     roster, roster_conflicts = roster_from_games(games_rows)
     timing = search_time(joined)
+    structures = search_structure_metrics(joined)
+    branching = branching_factor(joined)
+    branching_game = branching_factor_by_game(joined)
+    throughput = search_throughput(joined)
 
     doc = {
         "meta": {
@@ -480,6 +667,8 @@ def build_analysis(games_rows, moves_rows, label=""):
             "configs": sorted(set(r["config"] for r in games_rows)),
             "agents": agents,
             "budgets": budgets,
+            "experiments": sorted(set(
+                r.get("experiment") or "legacy" for r in games_rows)),
             "agent_versions": sorted(set(
                 [r.get("agent_first_version") or "v1" for r in games_rows]
                 + [r.get("agent_second_version") or "v1"
@@ -519,6 +708,17 @@ def build_analysis(games_rows, moves_rows, label=""):
         "tag_distribution": [
             {"agent": key[0], "tag": key[1], "count": count}
             for key, count in sorted(tags.items())],
+        "search_structure_metrics": [
+            dict(zip(("game", "config", "agent"), key), **e)
+            for key, e in sorted(structures.items())],
+        "branching_factor": [
+            dict(zip(("game", "config"), key), **e)
+            for key, e in sorted(branching.items())],
+        "branching_factor_by_game": [
+            dict(game=game, **e) for game, e in sorted(branching_game.items())],
+        "search_throughput": [
+            dict(zip(("game", "config", "agent"), key), **e)
+            for key, e in sorted(throughput.items())],
         "first_move_advantage": first_move_advantage(games_rows),
     }
     return _round(doc)

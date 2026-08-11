@@ -21,6 +21,11 @@ class MoveRecord:
     depth: Optional[int]
     move: str
     legal_move_count: int
+    tt_lookups: Optional[int] = None
+    tt_hits: Optional[int] = None
+    tt_size: Optional[int] = None
+    mcts_tree_nodes: Optional[int] = None
+    mcts_reused_nodes: Optional[int] = None
 
 
 @dataclass(frozen=True)
@@ -46,6 +51,10 @@ class GameRecord:
     agent_second_version: str = "v1"
     agent_first_params: str = "{}"
     agent_second_params: str = "{}"
+    # Identifies which experiment produced the row without changing the
+    # deterministic game id or replay seed. The main round-robin keeps the
+    # default; optional experiments use their own explicit label.
+    experiment: str = "main_tournament"
     moves: List[MoveRecord] = field(default_factory=list)
 
 
@@ -67,9 +76,17 @@ def game_id(game_name, agent_a, agent_b, config_name, trial):
     return "%s.%s.%s-%s.t%d" % (game_name, config_name, agent_a, agent_b, trial)
 
 
+def _side_seed(seed, side):
+    # type: (int, int) -> int
+    """Derive a deterministic RNG stream for one seat from the game seed."""
+    key = "%d|side|%d" % (seed, side)
+    digest = hashlib.sha256(key.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big")
+
+
 def play_game(game, agents, agent_names, config, seed, ply_cap=None,
               trial=0, workers=1, clock=None, agent_versions=None,
-              agent_params=None):
+              agent_params=None, separate_rng_streams=False):
     # type: (Any, Tuple[Any, Any], Tuple[str, str], dict, int, Optional[int], int, int, Any) -> GameRecord
     """Play one complete game. Fully determined by `seed`.
 
@@ -99,7 +116,14 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
     reason as "agent_error" above - the game was never resolved, so there is
     no principled winner to report.
     """
-    rng = random.Random(seed)
+    if separate_rng_streams:
+        rngs = (random.Random(_side_seed(seed, 0)),
+                random.Random(_side_seed(seed, 1)))
+    else:
+        # Preserve V1/V2 replay semantics exactly. V3 explicitly opts into
+        # per-side streams from the tournament source package.
+        shared_rng = random.Random(seed)
+        rngs = (shared_rng, shared_rng)
     state = game.initial_state()
     moves = []                      # type: List[MoveRecord]
     ply = 0
@@ -108,7 +132,12 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
     kwargs = {} if clock is None else {"clock": clock}
 
     while True:
-        if game.is_terminal(state):
+        # For every game in this project, an empty legal-move list is exactly
+        # the terminal condition. Reusing this list avoids the old
+        # is_terminal()->legal_moves() call followed by a second legal_moves()
+        # call solely to record branching factor and validate the decision.
+        legal = game.legal_moves(state)
+        if not legal:
             end_reason = game.end_reason(state)
             break
         if ply_cap is not None and ply >= ply_cap:
@@ -116,9 +145,9 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
             break
 
         side = state.side_to_move
-        legal = game.legal_moves(state)
         decision = decide(agents[side], game, state,
-                          config["time_budget_s"], config["max_nodes"], rng,
+                          config["time_budget_s"], config["max_nodes"],
+                          rngs[side],
                           **kwargs)
         agent_failed = decision.move is None
         illegal = not agent_failed and decision.move not in legal
@@ -144,6 +173,11 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
             depth=decision.depth,
             move=move_str,
             legal_move_count=len(legal),
+            tt_lookups=decision.tt_lookups,
+            tt_hits=decision.tt_hits,
+            tt_size=decision.tt_size,
+            mcts_tree_nodes=decision.mcts_tree_nodes,
+            mcts_reused_nodes=decision.mcts_reused_nodes,
         ))
         ply += 1
         if illegal:
@@ -178,6 +212,7 @@ def play_game(game, agents, agent_names, config, seed, ply_cap=None,
         agent_second_version=versions[1],
         agent_first_params=json.dumps(params[0], sort_keys=True),
         agent_second_params=json.dumps(params[1], sort_keys=True),
+        experiment="main_tournament",
         moves=moves,
     )
 
