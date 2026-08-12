@@ -1,0 +1,70 @@
+{
+  "agent_version": "v3",
+  "budgets": {
+    "ataxx": {
+      "easy": 2.0,
+      "hard": 0.1,
+      "main": 0.5
+    },
+    "isolation": {
+      "easy": 0.5,
+      "hard": 0.02,
+      "main": 0.1
+    },
+    "uttt": {
+      "easy": 2.0,
+      "hard": 0.1,
+      "main": 0.5
+    }
+  },
+  "commit": "195b1d51b2534f9ab884ae7cfc5e82e1f0f9fd21",
+  "configs": [
+    "easy",
+    "main",
+    "hard"
+  ],
+  "experiment": "main_tournament",
+  "games": [
+    "isolation",
+    "uttt",
+    "ataxx"
+  ],
+  "host": {
+    "arch": "x86_64",
+    "cpu_count": 4,
+    "cpu_model": "13th Gen Intel(R) Core(TM) i7-1365U",
+    "disk_gb": 19.2,
+    "kernel": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+    "os": "Ubuntu 22.04.5 LTS",
+    "ram_gb": 3.82,
+    "virtualisation": "microsoft"
+  },
+  "platform": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+  "python": "3.10.12",
+  "rng_streams": "per_side",
+  "roster": {
+    "alpha_beta": {
+      "max_entries": 200000
+    },
+    "heuristic": {},
+    "mcts": {
+      "epsilon": 1.0,
+      "max_nodes": 50000,
+      "rollout_depth": 10,
+      "sample_k": 1,
+      "tree_reuse": true
+    },
+    "random": {}
+  },
+  "schedule_size": 2700,
+  "source": "recorded",
+  "starts": [
+    {
+      "commit": "195b1d51b2534f9ab884ae7cfc5e82e1f0f9fd21",
+      "platform": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+      "python": "3.10.12"
+    }
+  ],
+  "trials": 25,
+  "wall_clock_seconds": 36114.609
+}

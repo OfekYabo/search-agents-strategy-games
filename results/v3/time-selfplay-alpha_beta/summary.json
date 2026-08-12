@@ -1,0 +1,9 @@
+{
+  "draws": 10,
+  "experiment": "time_selfplay",
+  "first_wins": 135,
+  "games": 180,
+  "higher_budget_wins": 115,
+  "lower_budget_wins": 55,
+  "second_wins": 35
+}

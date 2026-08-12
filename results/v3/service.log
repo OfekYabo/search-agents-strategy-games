@@ -1,0 +1,24 @@
+[2026-08-12 01:39:18] ==================================================================
+[2026-08-12 01:39:18] V3 suite starting. Agent version v3. Sequential, never parallel.
+[2026-08-12 01:39:18] ==================================================================
+[2026-08-12 01:39:18] START  main-grid/v3 (timeout: none)
+[2026-08-12 11:41:12] OK     main-grid/v3 in 601 min
+[2026-08-12 11:41:12] START  analyse/v3 (timeout: 1800)
+[2026-08-12 11:41:13] OK     analyse/v3 in 0 min
+[2026-08-12 11:41:13] START  report/v3 (timeout: 1800)
+[2026-08-12 11:41:14] OK     report/v3 in 0 min
+[2026-08-12 11:41:14] MAIN GRID COMPLETE - results/v3/report.md is ready to read
+[2026-08-12 11:41:14] START  time-selfplay/mcts (timeout: 7200)
+[2026-08-12 13:35:46] OK     time-selfplay/mcts in 114 min
+[2026-08-12 13:35:46] START  selfplay-report/mcts (timeout: 600)
+[2026-08-12 13:35:46] OK     selfplay-report/mcts in 0 min
+[2026-08-12 13:35:46] START  time-selfplay/alpha_beta (timeout: 7200)
+[2026-08-12 15:22:11] OK     time-selfplay/alpha_beta in 106 min
+[2026-08-12 15:22:11] START  selfplay-report/alpha_beta (timeout: 600)
+[2026-08-12 15:22:11] OK     selfplay-report/alpha_beta in 0 min
+[2026-08-12 15:22:11] ==================================================================
+[2026-08-12 15:22:11] V3 suite finished.
+[2026-08-12 15:22:11]   results/v3/report.md              main tournament
+[2026-08-12 15:22:11]   results/v3/selfplay-mcts.md       time scaling, MCTS
+[2026-08-12 15:22:11]   results/v3/selfplay-alpha_beta.md time scaling, Alpha-Beta
+[2026-08-12 15:22:11] ==================================================================

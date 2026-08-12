@@ -1,0 +1,166 @@
+[2026-08-12 01:39:18] ==================================================================
+[2026-08-12 01:39:18] V3 suite starting. Agent version v3. Sequential, never parallel.
+[2026-08-12 01:39:18] ==================================================================
+[2026-08-12 01:39:18] START  main-grid/v3 (timeout: none)
+scheduled 2700 games across 12 matchups
+  20/2700 games
+  40/2700 games
+  60/2700 games
+  80/2700 games
+  100/2700 games
+  120/2700 games
+  140/2700 games
+  160/2700 games
+  180/2700 games
+  200/2700 games
+  220/2700 games
+  240/2700 games
+  260/2700 games
+  280/2700 games
+  300/2700 games
+  320/2700 games
+  340/2700 games
+  360/2700 games
+  380/2700 games
+  400/2700 games
+  420/2700 games
+  440/2700 games
+  460/2700 games
+  480/2700 games
+  500/2700 games
+  520/2700 games
+  540/2700 games
+  560/2700 games
+  580/2700 games
+  600/2700 games
+  620/2700 games
+  640/2700 games
+  660/2700 games
+  680/2700 games
+  700/2700 games
+  720/2700 games
+  740/2700 games
+  760/2700 games
+  780/2700 games
+  800/2700 games
+  820/2700 games
+  840/2700 games
+  860/2700 games
+  880/2700 games
+  900/2700 games
+  920/2700 games
+  940/2700 games
+  960/2700 games
+  980/2700 games
+  1000/2700 games
+  1020/2700 games
+  1040/2700 games
+  1060/2700 games
+  1080/2700 games
+  1100/2700 games
+  1120/2700 games
+  1140/2700 games
+  1160/2700 games
+  1180/2700 games
+  1200/2700 games
+  1220/2700 games
+  1240/2700 games
+  1260/2700 games
+  1280/2700 games
+  1300/2700 games
+  1320/2700 games
+  1340/2700 games
+  1360/2700 games
+  1380/2700 games
+  1400/2700 games
+  1420/2700 games
+  1440/2700 games
+  1460/2700 games
+  1480/2700 games
+  1500/2700 games
+  1520/2700 games
+  1540/2700 games
+  1560/2700 games
+  1580/2700 games
+  1600/2700 games
+  1620/2700 games
+  1640/2700 games
+  1660/2700 games
+  1680/2700 games
+  1700/2700 games
+  1720/2700 games
+  1740/2700 games
+  1760/2700 games
+  1780/2700 games
+  1800/2700 games
+  1820/2700 games
+  1840/2700 games
+  1860/2700 games
+  1880/2700 games
+  1900/2700 games
+  1920/2700 games
+  1940/2700 games
+  1960/2700 games
+  1980/2700 games
+  2000/2700 games
+  2020/2700 games
+  2040/2700 games
+  2060/2700 games
+  2080/2700 games
+  2100/2700 games
+  2120/2700 games
+  2140/2700 games
+  2160/2700 games
+  2180/2700 games
+  2200/2700 games
+  2220/2700 games
+  2240/2700 games
+  2260/2700 games
+  2280/2700 games
+  2300/2700 games
+  2320/2700 games
+  2340/2700 games
+  2360/2700 games
+  2380/2700 games
+  2400/2700 games
+  2420/2700 games
+  2440/2700 games
+  2460/2700 games
+  2480/2700 games
+  2500/2700 games
+  2520/2700 games
+  2540/2700 games
+  2560/2700 games
+  2580/2700 games
+  2600/2700 games
+  2620/2700 games
+  2640/2700 games
+  2660/2700 games
+  2680/2700 games
+  2700/2700 games
+played 2700 games (rest already present)
+[2026-08-12 11:41:12] OK     main-grid/v3 in 601 min
+[2026-08-12 11:41:12] START  analyse/v3 (timeout: 1800)
+[2026-08-12 11:41:13] OK     analyse/v3 in 0 min
+[2026-08-12 11:41:13] START  report/v3 (timeout: 1800)
+warning: 8 commentary section(s) unfilled: overview, method, results, budget-response, search-volume, instrument-validation, game-characteristics, limitations
+[2026-08-12 11:41:14] OK     report/v3 in 0 min
+[2026-08-12 11:41:14] MAIN GRID COMPLETE - results/v3/report.md is ready to read
+[2026-08-12 11:41:14] START  time-selfplay/mcts (timeout: 7200)
+completed 180 games: first=96 second=77 draws=7
+[2026-08-12 13:35:46] OK     time-selfplay/mcts in 114 min
+[2026-08-12 13:35:46] START  selfplay-report/mcts (timeout: 600)
+warning: 2 commentary section(s) unfilled: selfplay-overview, selfplay-results
+[2026-08-12 13:35:46] OK     selfplay-report/mcts in 0 min
+[2026-08-12 13:35:46] START  time-selfplay/alpha_beta (timeout: 7200)
+completed 180 games: first=135 second=35 draws=10
+[2026-08-12 15:22:11] OK     time-selfplay/alpha_beta in 106 min
+[2026-08-12 15:22:11] START  selfplay-report/alpha_beta (timeout: 600)
+warning: 2 commentary section(s) unfilled: selfplay-overview, selfplay-results
+[2026-08-12 15:22:11] OK     selfplay-report/alpha_beta in 0 min
+[2026-08-12 15:22:11] ==================================================================
+[2026-08-12 15:22:11] V3 suite finished.
+[2026-08-12 15:22:11]   results/v3/report.md              main tournament
+[2026-08-12 15:22:11]   results/v3/selfplay-mcts.md       time scaling, MCTS
+[2026-08-12 15:22:11]   results/v3/selfplay-alpha_beta.md time scaling, Alpha-Beta
+[2026-08-12 15:22:11] ==================================================================
