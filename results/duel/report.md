@@ -84,6 +84,9 @@ question than the V3 grid could ask.
 | mcts | isolation | 0.613 | [0.533, 0.688] | 92-0-58 | 150 | **stronger** |
 | mcts | uttt | 0.540 | [0.460, 0.618] | 61-40-49 | 150 | not resolved |
 
+![Score against budget, per agent and game](figures/fig-duel-budget.svg)
+
+
 **V3 is stronger overall: 0.560 [0.533, 0.586].** Resolved, and the first time
 this project has resolved a version difference at all. Per agent, Alpha-Beta
 reaches 0.586 and MCTS 0.571, both resolved; the heuristic sits at 0.522 and is
@@ -168,6 +171,9 @@ One row per agent, game and budget. These are for texture: a single cell is too 
 | mcts | uttt | hard | 0.590 | [0.452, 0.715] | 24-11-15 | 50 | not resolved |
 | mcts | uttt | main | 0.520 | [0.385, 0.652] | 19-14-17 | 50 | not resolved |
 
+![Every cell against the 0.500 null](figures/fig-duel-forest.svg)
+
+
 ## Search volume
 
 
@@ -229,6 +235,9 @@ What each version actually did with the same budget. This is where a difference 
 | mcts | uttt | hard | v3 | 772 | 107.1 |
 | mcts | uttt | main | v2 | 3457 | 480.7 |
 | mcts | uttt | main | v3 | 3764 | 531.4 |
+
+![Work gained against strength gained](figures/fig-duel-work.svg)
+
 
 The volume table is the reason the strength results are interpretable rather
 than mysterious: it shows the versions genuinely differ in how much work they

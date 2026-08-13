@@ -39,6 +39,7 @@ step "duel-report" 1800 \
     python3 -m experiments.duel_report \
         --raw "$DIR/results/duel" \
         --commentary "$DIR/docs/report/commentary-duel.md" \
+        --figures "$DIR/results/duel/figures" \
         --out "$DIR/results/duel/report.md"
 
 say "=================================================================="

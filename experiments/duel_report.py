@@ -85,9 +85,15 @@ def _row(entry):
                entry["games"], _verdict(entry)))
 
 
-def render(games, moves, meta, sections=None):
-    # type: (list, list, dict, dict) -> str
+def render(games, moves, meta, sections=None, figure_names=()):
+    # type: (list, list, dict, dict, tuple) -> str
     sections = sections or {}
+    figures_present = set(figure_names)
+
+    def figure(name, caption):
+        if name not in figures_present:
+            return ""
+        return "\n![%s](figures/%s)\n" % (caption, name)
     versions = meta.get("versions") or ["v2", "v3"]
     old, new = versions[0], versions[1]
     if not games:
@@ -143,6 +149,8 @@ def render(games, moves, meta, sections=None):
          "verdict"],
         [[k[0], k[1]] + _row(e).split(" | ")
          for k, e in sorted(by_ag.items())]))
+    parts.append(figure("fig-duel-budget.svg",
+                        "Score against budget, per agent and game"))
     parts.append(slot("duel-results"))
 
     parts.append("\n## Every cell\n")
@@ -155,6 +163,8 @@ def render(games, moves, meta, sections=None):
          "games", "verdict"],
         [[k[0], k[1], k[2]] + _row(e).split(" | ")
          for k, e in sorted(cells.items())]))
+    parts.append(figure("fig-duel-forest.svg",
+                        "Every cell against the 0.500 null"))
 
     parts.append("\n## Search volume\n")
     parts.append("\nWhat each version actually did with the same budget. This "
@@ -167,6 +177,8 @@ def render(games, moves, meta, sections=None):
             ["agent", "game", "config", "version", "median work/move",
              "median sims/root"],
             volume))
+    parts.append(figure("fig-duel-work.svg",
+                        "Work gained against strength gained"))
     parts.append(slot("duel-search-volume"))
 
     parts.append("\n## Limitations\n")
@@ -216,6 +228,7 @@ def main(argv=None):
     parser.add_argument("--raw", required=True)
     parser.add_argument("--out", default="")
     parser.add_argument("--commentary", default="")
+    parser.add_argument("--figures", default="")
     args = parser.parse_args(argv)
 
     sections = {}
@@ -225,7 +238,13 @@ def main(argv=None):
     validate_commentary(sections, SECTION_IDS)
 
     games, moves, meta = load(args.raw)
-    text = render(games, moves, meta, sections=sections)
+    names = ()
+    if args.figures:
+        from experiments import duel_figures
+        names = tuple(os.path.basename(p) for p in
+                      duel_figures.render_all(games, moves, meta,
+                                              args.figures))
+    text = render(games, moves, meta, sections=sections, figure_names=names)
     missing = [i for i in SECTION_IDS if not sections.get(i)]
     if missing:
         sys.stderr.write("warning: %d commentary section(s) unfilled: %s\n"
