@@ -1,0 +1,63 @@
+{
+  "agents": [
+    "heuristic",
+    "alpha_beta",
+    "mcts"
+  ],
+  "configs": [
+    "easy",
+    "main",
+    "hard"
+  ],
+  "experiment": "version_duel",
+  "games": [
+    "isolation",
+    "uttt",
+    "ataxx"
+  ],
+  "host": {
+    "arch": "x86_64",
+    "cpu_count": 4,
+    "cpu_model": "13th Gen Intel(R) Core(TM) i7-1365U",
+    "disk_gb": 19.2,
+    "kernel": "Linux-5.15.0-186-generic-x86_64-with-glibc2.35",
+    "os": "Ubuntu 22.04.5 LTS",
+    "ram_gb": 3.82,
+    "virtualisation": "microsoft"
+  },
+  "python": "3.10.12",
+  "rng_note": "Both seats use independent per-seat streams regardless of what either version does in its own grid run. Shared streams are a property of the pair, not of one agent, so a duel cannot give each side its own historical mode. Holding it constant isolates the remaining changes.",
+  "rng_streams": "per_side",
+  "roster": {
+    "v2": {
+      "alpha_beta": {
+        "max_entries": 200000
+      },
+      "heuristic": {},
+      "mcts": {
+        "epsilon": 1.0,
+        "max_nodes": 50000,
+        "rollout_depth": 10,
+        "sample_k": 1
+      }
+    },
+    "v3": {
+      "alpha_beta": {
+        "max_entries": 200000
+      },
+      "heuristic": {},
+      "mcts": {
+        "epsilon": 1.0,
+        "max_nodes": 50000,
+        "rollout_depth": 10,
+        "sample_k": 1,
+        "tree_reuse": true
+      }
+    }
+  },
+  "trials": 25,
+  "versions": [
+    "v2",
+    "v3"
+  ]
+}

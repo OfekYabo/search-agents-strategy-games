@@ -1,0 +1,80 @@
+[2026-08-12 20:09:41] ==================================================================
+[2026-08-12 20:09:41] V2-vs-V3 duel starting. 25 trials (~11 h), sequential, never parallel.
+[2026-08-12 20:09:41] ==================================================================
+[2026-08-12 20:09:41] START  duel/v2-vs-v3 (timeout: none)
+duel v2 vs v3: 1350 games across 27 cells
+  20/1350 games
+  40/1350 games
+  60/1350 games
+  80/1350 games
+  100/1350 games
+  120/1350 games
+  140/1350 games
+  160/1350 games
+  180/1350 games
+  200/1350 games
+  220/1350 games
+  240/1350 games
+  260/1350 games
+  280/1350 games
+  300/1350 games
+  320/1350 games
+  340/1350 games
+  360/1350 games
+  380/1350 games
+  400/1350 games
+  420/1350 games
+  440/1350 games
+  460/1350 games
+  480/1350 games
+  500/1350 games
+  520/1350 games
+  540/1350 games
+  560/1350 games
+  580/1350 games
+  600/1350 games
+  620/1350 games
+  640/1350 games
+  660/1350 games
+  680/1350 games
+  700/1350 games
+  720/1350 games
+  740/1350 games
+  760/1350 games
+  780/1350 games
+  800/1350 games
+  820/1350 games
+  840/1350 games
+  860/1350 games
+  880/1350 games
+  900/1350 games
+  920/1350 games
+  940/1350 games
+  960/1350 games
+  980/1350 games
+  1000/1350 games
+  1020/1350 games
+  1040/1350 games
+  1060/1350 games
+  1080/1350 games
+  1100/1350 games
+  1120/1350 games
+  1140/1350 games
+  1160/1350 games
+  1180/1350 games
+  1200/1350 games
+  1220/1350 games
+  1240/1350 games
+  1260/1350 games
+  1280/1350 games
+  1300/1350 games
+  1320/1350 games
+  1340/1350 games
+played 1350 games (rest already present)
+[2026-08-13 05:32:07] OK     duel/v2-vs-v3 in 562 min
+[2026-08-13 05:32:07] START  duel-report (timeout: 1800)
+warning: 5 commentary section(s) unfilled: duel-overview, duel-method, duel-results, duel-search-volume, duel-limitations
+[2026-08-13 05:32:07] OK     duel-report in 0 min
+[2026-08-13 05:32:07] ==================================================================
+[2026-08-13 05:32:07] Duel finished.  results/duel/report.md
+[2026-08-13 05:32:07] ==================================================================
